@@ -10,9 +10,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { signInWithEmailAndPassword } from "firebase/auth"
-import { auth, db } from "@/firebase"
+import { authHelpers } from "@/app/firebase-helpers"
 import { collection, getDocs, query, where } from "firebase/firestore"
+import { db } from "@/firebase"
 import { ThemeToggle } from "../theme-toggle"
 import { Logo } from "../components/logo"
 
@@ -36,30 +36,38 @@ export default function AdminLogin() {
     setLoading(true)
 
     try {
+      console.log("🔧 Attempting admin login for:", email)
+      
       // First authenticate with Firebase
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const userCredential = await authHelpers.signIn(email, password)
+      console.log("✅ Firebase auth successful, user ID:", userCredential.user.uid)
 
       // Then check if the user is an admin
       const userQuery = query(collection(db, "users"), where("userId", "==", userCredential.user.uid), where("role", "==", "admin"))
+      console.log("🔍 Checking admin privileges...")
 
       const userSnapshot = await getDocs(userQuery)
+      console.log("📊 Admin query result:", userSnapshot.empty ? "No admin found" : "Admin found")
 
       if (userSnapshot.empty) {
         // Not an admin
+        console.log("❌ User does not have admin privileges")
         setError("You don't have admin privileges")
         setLoading(false)
         return
       }
 
       // Admin login successful
+      console.log("✅ Admin login successful!")
       setLoading(false)
       router.push("/admin-dashboard")
     } catch (err: any) {
+      console.error("❌ Admin login error:", err)
       setLoading(false)
       // Handle specific Firebase auth errors
-      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
+      if (err.message.includes("user-not-found") || err.message.includes("wrong-password")) {
         setError("Invalid email or password")
-      } else if (err.code === "auth/too-many-requests") {
+      } else if (err.message.includes("too-many-requests")) {
         setError("Too many failed login attempts. Please try again later")
       } else {
         setError("Failed to login. Please try again.")

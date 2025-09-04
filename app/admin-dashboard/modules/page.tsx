@@ -91,20 +91,16 @@ export default function ModulesPage() {
         return acc
       }, {} as Record<string, any[]>)
 
-      // Create module objects
+      // Create module objects (include all categories, including Company Introduction and AI tools)
       const moduleArray: Module[] = []
       Object.entries(videosByCategory).forEach(([category, videos]) => {
-        // Skip certain categories
-        if (category === "Company Introduction" || category === "AI tools") {
-          return
-        }
-
         const totalMinutes = videos.reduce((sum, video) => {
           const duration = video.duration || 0
           return sum + duration
         }, 0)
-
-        const moduleName = category.includes("Module") ? `${category} Overview` : `${category} Module Overview`
+        
+        // Use plain category as module name for all categories
+        const moduleName = category
         
         moduleArray.push({
           name: moduleName,

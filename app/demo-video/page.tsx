@@ -4,7 +4,6 @@ import { useState } from "react"
 import { ArrowLeft, Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import InteractiveGuide from "../components/InteractiveGuide"
 
 export default function DemoVideoPage() {
   const router = useRouter()
@@ -90,8 +89,7 @@ export default function DemoVideoPage() {
 
       </main>
 
-      {/* AI Interactive Guide */}
-      <InteractiveGuide />
+      
     </div>
   )
 } 

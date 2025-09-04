@@ -65,7 +65,7 @@ import { ThemeToggle } from "../theme-toggle"
 import { useAuth } from "../context/AuthContext"
 import { useGamification } from "../context/GamificationContext"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import InteractiveGuide from "../components/InteractiveGuide"
+ 
 import XPRewardPopup from "../components/XPRewardPopup"
 // import VideoQuiz from "../components/VideoQuiz"
 
@@ -3637,7 +3637,7 @@ export default function VideoPlayerPage() {
       )} */}
 
       {/* AI Interactive Guide */}
-      <InteractiveGuide />
+      
 
       {/* XP Reward Popup */}
       {xpRewardData && (
