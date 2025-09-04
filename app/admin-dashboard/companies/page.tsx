@@ -39,7 +39,7 @@ export default function CompaniesPage() {
       }
       setUser(currentUser)
 
-      const adminSnapshot = await getDocs(query(collection(db, "admins"), where("userId", "==", currentUser.uid)))
+      const adminSnapshot = await getDocs(query(collection(db, "users"), where("userId", "==", currentUser.uid), where("role", "==", "admin")))
       if (adminSnapshot.empty) {
         router.push("/")
         return

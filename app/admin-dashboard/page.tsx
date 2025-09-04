@@ -118,7 +118,7 @@ export default function AdminDashboard() {
         setUser(currentUser)
 
         // Check if user is an admin
-        const adminQuery = query(collection(db, "admins"), where("userId", "==", currentUser.uid))
+        const adminQuery = query(collection(db, "users"), where("userId", "==", currentUser.uid), where("role", "==", "admin"))
         const adminSnapshot = await getDocs(adminQuery)
 
         if (adminSnapshot.empty) {

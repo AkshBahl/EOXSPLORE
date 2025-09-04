@@ -40,11 +40,11 @@ export default function AdminLogin() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
 
       // Then check if the user is an admin
-      const adminQuery = query(collection(db, "admins"), where("userId", "==", userCredential.user.uid))
+      const userQuery = query(collection(db, "users"), where("userId", "==", userCredential.user.uid), where("role", "==", "admin"))
 
-      const adminSnapshot = await getDocs(adminQuery)
+      const userSnapshot = await getDocs(userQuery)
 
-      if (adminSnapshot.empty) {
+      if (userSnapshot.empty) {
         // Not an admin
         setError("You don't have admin privileges")
         setLoading(false)
