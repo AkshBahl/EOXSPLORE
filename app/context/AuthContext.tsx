@@ -47,16 +47,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("🔥 AuthContext - Auth state changed:", user ? `User: ${user.uid}` : "No user")
       setUser(user)
       if (user) {
         try {
+          console.log("🔥 AuthContext - Fetching user data for:", user.uid)
           const data = await getUserData(user.uid)
+          console.log("🔥 AuthContext - User data fetched:", data)
           setUserData(data as UserData)
         } catch (error) {
           console.error("AuthContext - Error fetching user data:", error)
           setUserData(null)
         }
       } else {
+        console.log("🔥 AuthContext - No user, clearing user data")
         setUserData(null)
       }
       setLoading(false)
@@ -66,14 +70,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = async (email: string, password: string) => {
+    console.log("🔥 AuthContext - Login attempt for:", email)
     await signInWithEmailAndPassword(auth, email, password)
   }
 
   const signup = async (email: string, password: string) => {
+    console.log("🔥 AuthContext - Signup attempt for:", email)
     await createUserWithEmailAndPassword(auth, email, password)
   }
 
   const logout = async () => {
+    console.log("🔥 AuthContext - Logout attempt")
     await signOut(auth)
     setUserData(null)
   }
@@ -81,7 +88,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUserData = async () => {
     if (user) {
       try {
+        console.log("🔥 AuthContext - Refreshing user data for:", user.uid)
         const data = await getUserData(user.uid)
+        console.log("🔥 AuthContext - User data refreshed:", data)
         setUserData(data as UserData)
       } catch (error) {
         console.error("Error refreshing user data:", error)

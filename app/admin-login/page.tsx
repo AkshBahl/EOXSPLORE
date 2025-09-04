@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -13,15 +13,25 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { authHelpers } from "@/app/firebase-helpers"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { db } from "@/firebase"
+import { useAuth } from "@/app/context/AuthContext"
 import { ThemeToggle } from "../theme-toggle"
 import { Logo } from "../components/logo"
 
 export default function AdminLogin() {
   const router = useRouter()
+  const { user, userData } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+
+  // Check if user is already authenticated and has admin privileges
+  useEffect(() => {
+    if (user && userData?.role === "admin") {
+      console.log("✅ User already authenticated as admin, redirecting to dashboard")
+      router.push("/admin-dashboard")
+    }
+  }, [user, userData, router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,7 +70,11 @@ export default function AdminLogin() {
       // Admin login successful
       console.log("✅ Admin login successful!")
       setLoading(false)
-      router.push("/admin-dashboard")
+      
+      // Wait a moment for AuthContext to update, then redirect
+      setTimeout(() => {
+        router.push("/admin-dashboard")
+      }, 500)
     } catch (err: any) {
       console.error("❌ Admin login error:", err)
       setLoading(false)

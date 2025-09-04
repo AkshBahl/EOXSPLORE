@@ -6,6 +6,8 @@ import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { auth } from "@/firebase"
+import { collection, getDocs, query, where } from "firebase/firestore"
+import { db } from "@/firebase"
 import { LayoutDashboard, Video, Upload, MessageSquare, LogOut, Menu, X, LineChart, Users, AlertTriangle, UserCog, Trophy, BookOpen, Building } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/app/theme-toggle"
@@ -34,13 +36,39 @@ export default function AdminDashboardLayout({
   const pathname = usePathname()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const checkAuth = auth.onAuthStateChanged((user) => {
+    const checkAuthAndAdmin = async (user: any) => {
       if (!user) {
-        router.push("/login")
+        console.log("🔍 No user authenticated, redirecting to admin login")
+        router.push("/admin-login")
+        return
       }
-    })
+
+      try {
+        console.log("🔍 Checking admin privileges for user:", user.uid)
+        // Check if user has admin role in Firestore
+        const userQuery = query(collection(db, "users"), where("userId", "==", user.uid), where("role", "==", "admin"))
+        const userSnapshot = await getDocs(userQuery)
+        
+        if (userSnapshot.empty) {
+          console.log("❌ User does not have admin privileges, redirecting to admin login")
+          router.push("/admin-login")
+          return
+        }
+
+        console.log("✅ User has admin privileges")
+        setIsAdmin(true)
+        setIsLoading(false)
+      } catch (error) {
+        console.error("❌ Error checking admin privileges:", error)
+        router.push("/admin-login")
+      }
+    }
+
+    const unsubscribe = auth.onAuthStateChanged(checkAuthAndAdmin)
 
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
@@ -53,7 +81,7 @@ export default function AdminDashboardLayout({
     window.addEventListener("resize", checkMobile)
 
     return () => {
-      checkAuth()
+      unsubscribe()
       window.removeEventListener("resize", checkMobile)
     }
   }, [router])
@@ -61,10 +89,24 @@ export default function AdminDashboardLayout({
   const handleLogout = async () => {
     try {
       await auth.signOut()
-      router.push("/login")
+      router.push("/admin-login")
     } catch (error) {
       console.error("Error signing out:", error)
     }
+  }
+
+  // Show loading state while checking admin privileges
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    )
+  }
+
+  // Don't render the layout if user is not admin
+  if (!isAdmin) {
+    return null
   }
 
   return (
