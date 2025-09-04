@@ -19,6 +19,7 @@ import { useGamification } from "../context/GamificationContext"
 import { useAuth } from "../context/AuthContext"
 import { db } from "@/firebase"
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore"
+import { cloudinaryConfig, getCloudinaryUrl } from "../cloudinary-config"
 
 interface ChatMessage {
   id: string
@@ -343,7 +344,7 @@ export default function InteractiveGuide({ onAction }: InteractiveGuideProps) {
         return {
           videoId,
           title: data.title || undefined,
-          thumbnail: data.thumbnailUrl || (data.publicId ? `https://res.cloudinary.com/dnx1sl0nq/video/upload/${data.publicId}.jpg` : `/placeholder.svg?height=120&width=200`),
+          thumbnail: data.thumbnailUrl || (data.publicId ? getCloudinaryUrl(data.publicId, 'video') : `/placeholder.svg?height=120&width=200`),
           duration: data.duration || ""
         }
       }
@@ -357,7 +358,7 @@ export default function InteractiveGuide({ onAction }: InteractiveGuideProps) {
         return {
           videoId,
           title: d.title || undefined,
-          thumbnail: d.thumbnailUrl || (d.publicId ? `https://res.cloudinary.com/dnx1sl0nq/video/upload/${d.publicId}.jpg` : `/placeholder.svg?height=120&width=200`),
+          thumbnail: d.thumbnailUrl || (d.publicId ? getCloudinaryUrl(d.publicId, 'video') : `/placeholder.svg?height=120&width=200`),
           duration: d.duration || ""
         }
       }

@@ -28,6 +28,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getDocs, orderBy, updateDoc } from "firebase/firestore"
 import { getAllModuleVideoOrders, getAllModuleOrders } from "../firestore-utils"
+import { cloudinaryConfig, getCloudinaryUrl } from "../cloudinary-config"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -813,7 +814,7 @@ export default function VideoPlayerPage() {
           duration: data.duration || "0 minutes",
                       thumbnail: (() => {
               let thumbnailUrl = data.thumbnailUrl || (data.publicId
-                ? `https://res.cloudinary.com/dh3bnbq9t/video/upload/${data.publicId}.jpg`
+                ? getCloudinaryUrl(data.publicId, 'video')
                 : "/placeholder.svg?height=180&width=320")
               if (thumbnailUrl && thumbnailUrl.includes('cloudinary.com')) {
                 const separator = thumbnailUrl.includes('?') ? '&' : '?'
@@ -863,7 +864,7 @@ export default function VideoPlayerPage() {
             duration: data.duration || "0 minutes",
             thumbnail: (() => {
               let thumbnailUrl = data.thumbnailUrl || (data.publicId
-                ? `https://res.cloudinary.com/dh3bnbq9t/video/upload/${data.publicId}.jpg`
+                ? getCloudinaryUrl(data.publicId, 'video')
                 : "/placeholder.svg?height=180&width=320")
               if (thumbnailUrl && thumbnailUrl.includes('cloudinary.com')) {
                 const separator = thumbnailUrl.includes('?') ? '&' : '?'
@@ -907,7 +908,7 @@ export default function VideoPlayerPage() {
             duration: videoData.duration || "0 minutes",
             thumbnail: (() => {
               let thumbnailUrl = videoData.thumbnailUrl || (videoData.publicId
-                ? `https://res.cloudinary.com/dh3bnbq9t/video/upload/${videoData.publicId}.jpg`
+                ? getCloudinaryUrl(videoData.publicId, 'video')
                 : "/placeholder.svg?height=180&width=320")
               if (thumbnailUrl && thumbnailUrl.includes('cloudinary.com')) {
                 const separator = thumbnailUrl.includes('?') ? '&' : '?'
@@ -954,7 +955,7 @@ export default function VideoPlayerPage() {
             duration: videoData.duration || "0 minutes",
             thumbnail: (() => {
               let thumbnailUrl = videoData.thumbnailUrl || (videoData.publicId
-                ? `https://res.cloudinary.com/dh3bnbq9t/video/upload/${videoData.publicId}.jpg`
+                ? getCloudinaryUrl(videoData.publicId, 'video')
                 : "/placeholder.svg?height=180&width=320")
               if (thumbnailUrl && thumbnailUrl.includes('cloudinary.com')) {
                 const separator = thumbnailUrl.includes('?') ? '&' : '?'
@@ -998,7 +999,7 @@ export default function VideoPlayerPage() {
           duration: data.duration || "0 minutes",
           thumbnail: (() => {
             let thumbnailUrl = data.thumbnailUrl || (data.publicId
-              ? `https://res.cloudinary.com/dnx1sl0nq/video/upload/${data.publicId}.jpg`
+              ? getCloudinaryUrl(data.publicId, 'video')
               : "/placeholder.svg?height=180&width=320")
             if (thumbnailUrl && thumbnailUrl.includes('cloudinary.com')) {
               const separator = thumbnailUrl.includes('?') ? '&' : '?'

@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { useGamification, XP_CONFIG } from "../context/GamificationContext"
+import { cloudinaryConfig, getCloudinaryUrl } from "../cloudinary-config"
 import { useAuth } from "../context/AuthContext"
 import { toast } from "@/components/ui/use-toast"
 import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore"
@@ -148,7 +149,7 @@ export default function GamifiedDashboard() {
       const allVideos = videosSnapshot.docs.map(doc => {
         const data = doc.data() as any
         const thumbnailFromPublicId = data?.publicId
-          ? `https://res.cloudinary.com/dnx1sl0nq/video/upload/${data.publicId}.jpg`
+          ? getCloudinaryUrl(data.publicId, 'video')
           : undefined
         return {
           id: doc.id,
@@ -285,7 +286,7 @@ export default function GamifiedDashboard() {
       ].map(v => ({
         ...v,
         // Ensure thumbnail field is populated for the video player poster
-        thumbnail: v.thumbnail || v.thumbnailUrl || (v.publicId ? `https://res.cloudinary.com/dnx1sl0nq/video/upload/${(v as any).publicId}.jpg` : undefined),
+        thumbnail: v.thumbnail || v.thumbnailUrl || (v.publicId ? getCloudinaryUrl((v as any).publicId, 'video') : undefined),
       }))
 
       console.log(`📋 Total playlist videos: ${allPlaylistVideos.length}`)

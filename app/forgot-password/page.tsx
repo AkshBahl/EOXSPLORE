@@ -2,8 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { sendPasswordResetEmail } from "firebase/auth"
-import { auth } from "@/firebase"
+import { authHelpers } from "@/app/firebase-helpers"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -71,7 +70,7 @@ export default function ForgotPassword() {
         console.log("Action URL:", actionCodeSettings.url)
         console.log("Current origin:", window.location.origin)
         
-        await sendPasswordResetEmail(auth, email, actionCodeSettings)
+        await authHelpers.resetPassword(email)
         setSuccess("Password reset email sent! Please check your inbox and spam folder.")
         toast({
           title: "Success",
@@ -202,8 +201,8 @@ export default function ForgotPassword() {
               <div className="mt-2 p-3 bg-gray-50 rounded text-xs text-gray-600">
                 <p><strong>Current URL:</strong> {window.location.href}</p>
                 <p><strong>Origin:</strong> {window.location.origin}</p>
-                <p><strong>Firebase Auth Domain:</strong> demoauth-82b79.firebaseapp.com</p>
-                <p><strong>Project ID:</strong> demoauth-82b79</p>
+                <p><strong>Firebase Auth Domain:</strong> eoxsplore.firebaseapp.com</p>
+                <p><strong>Project ID:</strong> eoxsplore</p>
                 <p><strong>Action URL:</strong> {window.location.origin}/login</p>
                 <p><strong>Reset Method:</strong> {useCustomReset ? 'Custom' : 'Firebase'}</p>
               </div>

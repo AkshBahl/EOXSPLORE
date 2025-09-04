@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getDocs, orderBy, updateDoc } from "firebase/firestore"
+import { cloudinaryConfig, getCloudinaryUrl } from "../cloudinary-config"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -141,7 +142,7 @@ export default function CleanVideoPlayer() {
             id: docId,
             title: videoData.title || "Untitled Video",
             duration: videoData.duration || "0:00",
-            thumbnail: videoData.thumbnailUrl || (videoData.publicId ? `https://res.cloudinary.com/dnx1sl0nq/video/upload/${videoData.publicId}.jpg` : "/placeholder.svg?height=180&width=320"),
+            thumbnail: videoData.thumbnailUrl || (videoData.publicId ? getCloudinaryUrl(videoData.publicId, 'video') : "/placeholder.svg?height=180&width=320"),
             publicId: videoData.publicId,
             videoUrl: videoData.videoUrl,
             description: videoData.description || "",
@@ -446,7 +447,7 @@ export default function CleanVideoPlayer() {
                                       <video
                ref={videoRef}
                className="w-full aspect-video bg-black rounded-lg"
-               poster={currentVideo.thumbnail ? `https://res.cloudinary.com/dnx1sl0nq/video/upload/${currentVideo.thumbnail}.jpg` : undefined}
+               poster={currentVideo.thumbnail ? getCloudinaryUrl(currentVideo.thumbnail, 'video') : undefined}
                onTimeUpdate={handleTimeUpdate}
                onLoadedMetadata={() => {
                  // Always start paused, only autoplay if explicitly requested

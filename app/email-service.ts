@@ -1,4 +1,4 @@
-import { db } from "./firebase"
+import { db } from "@/firebase"
 import { collection, addDoc, serverTimestamp } from "firebase/firestore"
 
 // In a real application, you would use a proper email service like SendGrid, Mailgun, etc.

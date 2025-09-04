@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { cloudinaryConfig, getCloudinaryUrl, getUploadUrl } from "@/app/cloudinary-config"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MoreHorizontal, Trash2, PlayCircle, Edit, RefreshCw, SortAsc } from "lucide-react"
@@ -187,18 +188,18 @@ export default function VideosPage() {
       
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('upload_preset', 'eoxsDemoTool') // Use the same preset that works for videos
-      formData.append('cloud_name', 'dnx1sl0nq')
-      
+      formData.append('upload_preset', cloudinaryConfig.uploadPreset) // Use the same preset that works for videos
+      formData.append('cloud_name', cloudinaryConfig.cloudName)
+
       // Log the form data for debugging
       console.log('Form data entries:')
       for (let [key, value] of formData.entries()) {
         console.log(key, ':', value)
       }
-      
+
       console.log('Uploading to Cloudinary...')
-      
-      const response = await fetch(`https://api.cloudinary.com/v1_1/dnx1sl0nq/image/upload`, {
+
+      const response = await fetch(getUploadUrl('image'), {
         method: 'POST',
         body: formData,
       })
@@ -285,7 +286,7 @@ export default function VideosPage() {
 
     try {
       // Generate thumbnail URL from Cloudinary video public ID
-      const thumbnailUrl = `https://res.cloudinary.com/dnx1sl0nq/video/upload/${selectedVideo.publicId}.jpg`
+      const thumbnailUrl = getCloudinaryUrl(selectedVideo.publicId, 'video')
       setEditedVideo({ ...editedVideo, thumbnailUrl })
       setThumbnailPreview(thumbnailUrl)
       toast({

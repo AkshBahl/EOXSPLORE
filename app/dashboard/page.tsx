@@ -27,6 +27,7 @@ import XPRewardPopup from "../components/XPRewardPopup"
 
 import ChallengeMode from "../components/ChallengeMode"
 import { getAllModuleVideoOrders, getAllModuleOrders, getAllModuleDisplayNames } from "../firestore-utils"
+import { cloudinaryConfig, getCloudinaryUrl } from "../cloudinary-config"
 
 interface Video {
   id: string
@@ -445,7 +446,7 @@ export default function Dashboard() {
           thumbnail: getSafeUrl(
             (() => {
               let thumbnailUrl = data.thumbnailUrl || (data.publicId
-                ? `https://res.cloudinary.com/dnx1sl0nq/video/upload/${data.publicId}.jpg`
+                ? getCloudinaryUrl(data.publicId, 'video')
                 : undefined)
               
               // Add cache-busting timestamp to Cloudinary URLs

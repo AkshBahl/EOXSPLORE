@@ -10,10 +10,12 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, User, Mail, Lock, Eye, EyeOff, Sparkles, Shield, ArrowRight, CheckCircle, Phone, UserPlus } from "lucide-react"
-import { db, auth } from "../../firebase"
+import { authHelpers } from "@/app/firebase-helpers"
 import { collection, addDoc, serverTimestamp, getDocs, query, where } from "firebase/firestore"
-import { createUserWithEmailAndPassword } from "firebase/auth"
+import { db } from "@/firebase"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import FirebaseDebug from "@/app/components/FirebaseDebug"
+import { clearAllFirebaseCache } from "@/app/firebase-cache-clear"
 
 export default function SignUp() {
   const router = useRouter()
@@ -57,6 +59,9 @@ export default function SignUp() {
   ]
 
   useEffect(() => {
+    // Clear all Firebase cache on component mount
+    clearAllFirebaseCache()
+    
     setTimeout(() => {
       setIsLoaded(true)
     }, 100)
@@ -120,7 +125,7 @@ export default function SignUp() {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const userCredential = await authHelpers.signUp(email, password)
 
       // Add user to users collection
       await addDoc(collection(db, "users"), {
@@ -138,11 +143,11 @@ export default function SignUp() {
       router.push("/login")
     } catch (err: any) {
       console.error("Error signing up:", err)
-      if (err.code === "auth/email-already-in-use") {
+      if (err.message.includes("email-already-in-use")) {
         setError("Email is already in use")
-      } else if (err.code === "auth/invalid-email") {
+      } else if (err.message.includes("invalid-email")) {
         setError("Invalid email address")
-      } else if (err.code === "auth/weak-password") {
+      } else if (err.message.includes("weak-password")) {
         setError("Password is too weak")
       } else {
         setError("Failed to create an account. Please try again.")
@@ -468,6 +473,9 @@ export default function SignUp() {
           </div>
         </div>
       </footer>
+      
+      {/* Firebase Debug Component */}
+      <FirebaseDebug />
     </div>
   )
 }

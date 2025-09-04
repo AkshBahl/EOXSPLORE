@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { motion } from "framer-motion"
 import { signOut } from "firebase/auth"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { cloudinaryConfig, getCloudinaryUrl, getUploadUrl } from "@/app/cloudinary-config"
 
 export default function UploadPage() {
   const router = useRouter()
@@ -143,7 +144,7 @@ export default function UploadPage() {
       formData.append("file", file)
       formData.append("upload_preset", "eoxsDemoTool")
 
-      const response = await fetch(`https://api.cloudinary.com/v1_1/dnx1sl0nq/video/upload`, {
+      const response = await fetch(getUploadUrl('video'), {
         method: "POST",
         body: formData,
       })
@@ -166,7 +167,7 @@ export default function UploadPage() {
         tags,
         videoUrl: data.secure_url,
         publicId: data.public_id,
-        thumbnailUrl: `https://res.cloudinary.com/dnx1sl0nq/video/upload/${data.public_id}.jpg`,
+        thumbnailUrl: getCloudinaryUrl(data.public_id, 'video'),
         createdAt: serverTimestamp(),
       })
 

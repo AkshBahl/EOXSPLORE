@@ -8,9 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, User, Mail, Lock, Eye, EyeOff, Sparkles, Shield, ArrowRight, CheckCircle } from "lucide-react"
-import { signInWithEmailAndPassword } from "firebase/auth"
+import { authHelpers } from "@/app/firebase-helpers"
 import { toast } from "@/components/ui/use-toast"
-import { auth } from "@/firebase"
 
 export default function Login() {
   const router = useRouter()
@@ -34,7 +33,7 @@ export default function Login() {
 
     try {
       setError("")
-      await signInWithEmailAndPassword(auth, email, password)
+      await authHelpers.signIn(email, password)
       // Store in localStorage if remember me is checked
       if (rememberMe) {
         localStorage.setItem("rememberedEmail", email)

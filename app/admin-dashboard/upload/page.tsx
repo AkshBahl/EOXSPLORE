@@ -20,7 +20,7 @@ import { signOut } from "firebase/auth"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Logo } from "@/app/components/logo"
 import { ThemeToggle } from "@/app/theme-toggle"
-import { auth, db } from "@/firebase"
+import { cloudinaryConfig, getCloudinaryUrl, getUploadUrl } from "@/app/cloudinary-config"
 import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore"
 
 export default function UploadPage() {
@@ -142,10 +142,10 @@ export default function UploadPage() {
       
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('upload_preset', 'eoxsDemoTool')
-      formData.append('cloud_name', 'dnx1sl0nq')
-      
-      const response = await fetch(`https://api.cloudinary.com/v1_1/dnx1sl0nq/image/upload`, {
+      formData.append('upload_preset', cloudinaryConfig.uploadPreset)
+      formData.append('cloud_name', cloudinaryConfig.cloudName)
+
+      const response = await fetch(getUploadUrl('image'), {
         method: 'POST',
         body: formData,
       })
@@ -237,7 +237,7 @@ export default function UploadPage() {
       formData.append("file", file)
       formData.append("upload_preset", "eoxsDemoTool")
 
-      const response = await fetch(`https://api.cloudinary.com/v1_1/dnx1sl0nq/video/upload`, {
+      const response = await fetch(getUploadUrl('video'), {
         method: "POST",
         body: formData,
       })
@@ -260,7 +260,7 @@ export default function UploadPage() {
         tags,
         videoUrl: data.secure_url,
         publicId: data.public_id,
-        thumbnailUrl: customThumbnailUrl || `https://res.cloudinary.com/dnx1sl0nq/video/upload/${data.public_id}.jpg`,
+        thumbnailUrl: customThumbnailUrl || getCloudinaryUrl(data.public_id, 'video'),
         createdAt: serverTimestamp(),
       })
 
