@@ -1,8 +1,8 @@
 // Cloudinary Configuration
-// Using your provided Cloudinary credentials
+// Using your actual Cloudinary credentials from the console
 export const cloudinaryConfig = {
-  cloudName: '696641831439771', // Your Cloudinary cloud name (as string)
-  uploadPreset: 'dm61hxcfp', // Your upload preset
+  cloudName: 'dm61hxcfp', // Your actual Cloudinary cloud name
+  uploadPreset: 'eoxsDemoTool', // Create this upload preset in your dashboard
   apiKey: '696641831439771' // Your API key
 }
 
