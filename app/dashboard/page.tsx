@@ -7,7 +7,7 @@ import { collection, getDocs, orderBy, query, where, doc, getDoc } from "firebas
 
 import { signOut } from "firebase/auth"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+ 
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -21,7 +21,6 @@ import { useAuth } from "../context/AuthContext"
 import { useGamification } from "../context/GamificationContext"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import GamifiedDashboard from "../components/GamifiedDashboard"
-import InteractiveGuide from "../components/InteractiveGuide"
 import XPRewardPopup from "../components/XPRewardPopup"
 
 
@@ -266,11 +265,7 @@ export default function Dashboard() {
   useEffect(() => {
     // Filter videos based on search query and company
     if (!searchQuery && !selectedCompany) {
-      // Filter out General videos for dashboard display only
-      const filteredForDisplay = videos.filter(
-        (video) => video.category !== "Company Introduction"
-      )
-      setFilteredVideos(filteredForDisplay)
+      setFilteredVideos(videos)
       return
     }
 
@@ -294,12 +289,7 @@ export default function Dashboard() {
       )
     }
 
-    // Filter out General videos for dashboard display only
-    const filteredForDisplay = filtered.filter(
-      (video) => video.category !== "Company Introduction"
-    )
-
-    setFilteredVideos(filteredForDisplay)
+    setFilteredVideos(filtered)
   }, [searchQuery, videos, selectedCompany])
 
   // Handle view parameter from URL (for switching to classic dashboard)
@@ -539,13 +529,10 @@ export default function Dashboard() {
         .replace(/[\u00A0\u200B\u2009\u202F]+/g, " ")
         .replace(/\s+/g, " ")
         .trim()
-    // Group videos by category
+    // Group videos by category (include Company Introduction and AI tools too)
     const videosByCategory = videos.reduce(
       (acc, video) => {
-        // Exclude General and AI tools categories
-        if (video.category === "Company Introduction" || video.category === "AI tools") {
-          return acc
-        }
+        // Include all categories
         const category = sanitize(video.category || "Uncategorized")
         if (!acc[category]) {
           acc[category] = []
@@ -570,7 +557,7 @@ export default function Dashboard() {
       return `${totalMinutes} mins`
     }
 
-    // Add other categories as modules (except General and AI tools)
+    // Add all categories as modules
     Object.entries(videosByCategory).forEach(([category, videos]) => {
       // Normalize category for lookup
       const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/gi, "")
@@ -1225,158 +1212,58 @@ export default function Dashboard() {
             
             <div className="max-w-6xl mx-auto p-6">
               {/* Enhanced Search and Actions Section */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-                <div className="flex flex-col lg:flex-row justify-between gap-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
-                      type="search"
-                      placeholder="Search videos by title, tags, or description..."
-                      className="pl-10 h-12 border-slate-200 focus:border-green-500 focus:ring-green-500/20 transition-all duration-200"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                  <div className="w-full lg:w-auto">
-                    <Button
-                      onClick={handleWatchSelected}
-                      disabled={selectedVideos.length === 0}
-                      className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 h-12 px-6"
-                    >
-                      <Play className="mr-2 h-4 w-4" />
-                      Watch Selected ({selectedVideos.length})
-                    </Button>
-                  </div>
+              <div className="flex justify-end mb-4">
+                <div className="w-full lg:w-auto">
+                  <Button
+                    onClick={handleWatchSelected}
+                    disabled={selectedVideos.length === 0}
+                    className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 h-12 px-6"
+                  >
+                    <Play className="mr-2 h-4 w-4" />
+                    Watch Selected ({selectedVideos.length})
+                  </Button>
                 </div>
               </div>
 
-
-
-            {/* Enhanced Content Area */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                {loading ? (
-                  <div className="p-8">
-                    <div className="space-y-4">
-                      {[...Array(3)].map((_, i) => (
-                        <div key={i} className="h-16 bg-gradient-to-r from-slate-100 to-slate-200 animate-pulse rounded-lg"></div>
-                      ))}
-                    </div>
+              {/* Module Image Tiles */}
+              {modules.length > 0 && (
+                <div className="mb-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {modules.map((module) => {
+                      const displayName = (moduleDisplayNames[module.category] || module.name).trim()
+                      const imgSrc = "/placeholder.svg?height=140&width=240"
+                      const handleClick = () => {
+                        setExpandedModules([module.category])
+                        setTimeout(() => {
+                          const el = document.getElementById(`module-${module.category.replace(/\\s+/g, '-').toLowerCase()}`)
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }, 50)
+                      }
+                      return (
+                        <button
+                          key={module.category}
+                          onClick={handleClick}
+                          className="group text-left bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
+                        >
+                          <div className="aspect-[6/4] bg-slate-100 overflow-hidden">
+                            <img
+                              src={imgSrc}
+                              alt={displayName}
+                              className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-200"
+                            />
+                          </div>
+                          <div className="p-3">
+                            <div className="font-semibold text-slate-800 truncate">{displayName}</div>
+                            <div className="text-xs text-slate-500 mt-1">{module.videos.length} videos • {module.totalDuration}</div>
+                          </div>
+                        </button>
+                      )
+                    })}
                   </div>
-                ) : modules.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Search className="h-8 w-8 text-slate-400" />
-                    </div>
-                    <h3 className="text-lg font-medium text-slate-900 mb-2">No videos found</h3>
-                    <p className="text-slate-500">Try adjusting your search criteria or filters</p>
-                  </div>
-                ) : (
-                  <div className="p-4 sm:p-6">
-                    {/* Module-level selection only */}
-                    <div className="flex flex-col sm:flex-row sm:items-center mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200 gap-3 sm:gap-0">
-                      <span className="text-sm font-medium text-slate-700 leading-relaxed">Select whole modules using the checkboxes on each module</span>
-                      <Badge variant="outline" className="sm:ml-auto bg-blue-50 text-blue-700 border-blue-200 self-start sm:self-auto w-fit">
-                        {selectedVideos.length} videos
-                      </Badge>
-                    </div>
+                </div>
+              )}
 
-                    {/* Enhanced Accordion */}
-                    <Accordion type="multiple" value={expandedModules} onValueChange={setExpandedModules} className="w-full space-y-3">
-                      {modules.map((module, moduleIndex) => (
-                        <AccordionItem key={moduleIndex} value={module.category} className="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-all duration-200">
-                          <AccordionTrigger className="px-4 sm:px-6 py-4 hover:no-underline bg-gradient-to-r from-slate-50 to-white hover:from-slate-100 hover:to-slate-50">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-3 sm:gap-0">
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                {/* Module Select All Checkbox */}
-                                <Checkbox
-                                  ref={(el) => {
-                                    moduleCheckboxRefs.current[moduleIndex] = el
-                                  }}
-                                  checked={module.videos.every((v) => selectedVideos.includes(v.id))}
-                                  onCheckedChange={() => {
-                                    const moduleVideoIds = module.videos.map((v) => v.id)
-                                    const allSelected = moduleVideoIds.every((id) => selectedVideos.includes(id))
-                                    if (allSelected) {
-                                      setSelectedVideos(selectedVideos.filter((id) => !moduleVideoIds.includes(id)))
-                                    } else {
-                                      setSelectedVideos([...new Set([...selectedVideos, ...moduleVideoIds])])
-                                    }
-                                  }}
-                                  className="flex-shrink-0"
-                                />
-                                <span className="font-semibold text-slate-900 text-sm sm:text-base truncate">{(moduleDisplayNames[module.category] || module.name).trim()}</span>
-                              </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-2 py-0.5">
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  <span className="hidden sm:inline">{module.totalDuration}</span>
-                                  <span className="sm:hidden">{module.totalDuration.replace(' mins', 'm').replace(' min', 'm')}</span>
-                                </Badge>
-                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-2 py-0.5">
-                                  <span className="hidden sm:inline">{module.videos.length} videos</span>
-                                  <span className="sm:hidden">{module.videos.length} v</span>
-                                </Badge>
-                              </div>
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-0">
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-sm">
-                                <thead className="bg-slate-50 border-t border-slate-200">
-                                  <tr>
-                                    <th className="px-4 sm:px-6 py-3 text-left font-semibold text-slate-700">Feature</th>
-                                    <th className="hidden sm:table-cell px-6 py-3 text-left font-semibold text-slate-700 w-32 whitespace-nowrap">
-                                      Video Length
-                                    </th>
-                                    <th className="px-4 sm:px-6 py-3 text-left font-semibold text-slate-700 w-24">
-                                      <div className="flex items-center">
-                                        <div className="w-2 h-2 mr-2"></div>
-                                        Status
-                                      </div>
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                  {module.videos.map((video) => (
-                                    <tr key={video.id} className="hover:bg-slate-50/50 transition-colors">
-                                      <td className="px-4 sm:px-6 py-4">
-                                        <div className="font-medium text-slate-900 text-sm sm:text-base">{video.title}</div>
-                                        <div className="sm:hidden flex items-center text-slate-600 text-xs mt-1">
-                                          <Clock className="h-3 w-3 mr-1 text-slate-400" />
-                                          {video.duration}
-                                        </div>
-                                      </td>
-                                      <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-slate-700">
-                                        <div className="flex items-center text-slate-600 whitespace-nowrap">
-                                          <Clock className="h-3.5 w-3.5 mr-2 text-slate-400" />
-                                          {video.duration}
-                                        </div>
-                                      </td>
-                                      <td className="px-4 sm:px-6 py-4">
-                                        {video.watched ? (
-                                          <div className="flex items-center text-green-600">
-                                            <CheckCircle className="h-4 w-4 mr-1.5" />
-                                            <span className="text-xs font-medium">Completed</span>
-                                          </div>
-                                        ) : (
-                                          <div className="flex items-center text-slate-500">
-                                            <div className="w-2 h-2 bg-slate-300 rounded-full mr-2"></div>
-                                            <span className="text-xs">Pending</span>
-                                          </div>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      ))}
-                    </Accordion>
-                  </div>
-                )}
-              </div>
+            {/* Old list view hidden intentionally */}
             </div>
           </>
         )}
@@ -1397,8 +1284,7 @@ export default function Dashboard() {
         </div>
       </footer>
 
-      {/* AI Interactive Guide */}
-      <InteractiveGuide />
+      
 
       {/* XP Reward Popup */}
       {xpRewardData && (
