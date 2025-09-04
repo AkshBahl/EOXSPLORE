@@ -16,12 +16,14 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { motion } from "framer-motion"
-import { signOut } from "firebase/auth"
+import { signOut, auth } from "firebase/auth"
+import { auth as firebaseAuth } from "@/firebase"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Logo } from "@/app/components/logo"
 import { ThemeToggle } from "@/app/theme-toggle"
 import { cloudinaryConfig, getCloudinaryUrl, getUploadUrl } from "@/app/cloudinary-config"
 import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore"
+import { db } from "@/firebase"
 
 export default function UploadPage() {
   const router = useRouter()
@@ -62,7 +64,7 @@ export default function UploadPage() {
 
   useEffect(() => {
     // Check if user is authenticated and is an admin
-    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+    const unsubscribe = firebaseAuth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         setUser(currentUser)
       } else {
@@ -232,17 +234,34 @@ export default function UploadPage() {
     const progressInterval = simulateProgress()
 
     try {
+      console.log("🚀 Starting video upload to Cloudinary...")
+      console.log("📁 File:", file.name, "Size:", file.size)
+      console.log("☁️ Cloudinary config:", cloudinaryConfig)
+      
       // Upload video to Cloudinary
       const formData = new FormData()
       formData.append("file", file)
-      formData.append("upload_preset", "eoxsDemoTool")
+      formData.append("upload_preset", cloudinaryConfig.uploadPreset)
+      formData.append("cloud_name", cloudinaryConfig.cloudName)
 
-      const response = await fetch(getUploadUrl('video'), {
+      const uploadUrl = getUploadUrl('video')
+      console.log("🔗 Upload URL:", uploadUrl)
+
+      const response = await fetch(uploadUrl, {
         method: "POST",
         body: formData,
       })
 
+      console.log("📡 Response status:", response.status)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("❌ Upload failed:", errorText)
+        throw new Error(`Upload failed: ${response.status} ${response.statusText}`)
+      }
+
       const data = await response.json()
+      console.log("✅ Upload response:", data)
 
       if (!data.secure_url) {
         throw new Error("Failed to upload video to Cloudinary.")
@@ -251,6 +270,8 @@ export default function UploadPage() {
       clearInterval(progressInterval)
       setUploadProgress(100)
 
+      console.log("💾 Saving video details to Firestore...")
+      
       // Save video details to Firebase Firestore
       await addDoc(collection(db, "videos"), {
         title,
@@ -284,10 +305,10 @@ export default function UploadPage() {
         setStatusMessage("")
       }, 2000)
     } catch (error) {
-      console.error("Error uploading video:", error)
+      console.error("❌ Error uploading video:", error)
       clearInterval(progressInterval)
       setUploadStatus("error")
-      setStatusMessage("Failed to upload video. Please try again.")
+      setStatusMessage(`Failed to upload video: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setUploading(false)
     }
@@ -295,7 +316,7 @@ export default function UploadPage() {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth)
+      await signOut(firebaseAuth)
       router.push("/admin-login")
     } catch (error) {
       console.error("Error signing out:", error)
