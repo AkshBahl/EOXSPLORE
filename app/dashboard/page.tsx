@@ -1231,7 +1231,55 @@ export default function Dashboard() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {modules.map((module) => {
                       const displayName = (moduleDisplayNames[module.category] || module.name).trim()
-                      const imgSrc = "/placeholder.svg?height=140&width=240"
+                      
+                      // Module thumbnail mapping
+                      const getModuleThumbnail = (category: string) => {
+                        const moduleThumbnails: Record<string, string> = {
+                          "Sales Module": "/demo.jpg", // Sales-related image
+                          "Processing": "/forge-worker.jpg", // Manufacturing/processing image
+                          "Inventory Management": "/Main-EOXS-landing.jpg", // Business operations
+                          "Purchase": "/demo.jpg", // Business operations
+                          "Finance and Accounting": "/Main-EOXS-landing.jpg", // Business operations
+                          "Shipping and Receiving": "/forge-worker.jpg", // Logistics
+                          "CRM": "/demo.jpg", // Customer relationship
+                          "IT & Security": "/Main-EOXS-landing.jpg", // Technology
+                          "Advanced Analytics & Reporting": "/Main-EOXS-landing.jpg", // Analytics
+                          "Master Data Management": "/demo.jpg", // Data management
+                          "Contact Management": "/demo.jpg", // Contact management
+                          "QA Module": "/forge-worker.jpg", // Quality assurance
+                          "Company Introduction": "/Company Overview.png", // Company intro
+                          "Additional Features": "/Main-EOXS-landing.jpg", // Additional features
+                          "AI tools": "/Main-EOXS-landing.jpg", // AI tools
+                        }
+                        
+                        // Try exact match first
+                        if (moduleThumbnails[category]) {
+                          return moduleThumbnails[category]
+                        }
+                        
+                        // Try partial matches
+                        const lowerCategory = category.toLowerCase()
+                        if (lowerCategory.includes('sales')) return moduleThumbnails["Sales Module"]
+                        if (lowerCategory.includes('processing')) return moduleThumbnails["Processing"]
+                        if (lowerCategory.includes('inventory')) return moduleThumbnails["Inventory Management"]
+                        if (lowerCategory.includes('purchase')) return moduleThumbnails["Purchase"]
+                        if (lowerCategory.includes('finance')) return moduleThumbnails["Finance and Accounting"]
+                        if (lowerCategory.includes('shipping')) return moduleThumbnails["Shipping and Receiving"]
+                        if (lowerCategory.includes('crm')) return moduleThumbnails["CRM"]
+                        if (lowerCategory.includes('security') || lowerCategory.includes('it')) return moduleThumbnails["IT & Security"]
+                        if (lowerCategory.includes('analytics') || lowerCategory.includes('reporting')) return moduleThumbnails["Advanced Analytics & Reporting"]
+                        if (lowerCategory.includes('master data')) return moduleThumbnails["Master Data Management"]
+                        if (lowerCategory.includes('contact')) return moduleThumbnails["Contact Management"]
+                        if (lowerCategory.includes('qa')) return moduleThumbnails["QA Module"]
+                        if (lowerCategory.includes('company')) return moduleThumbnails["Company Introduction"]
+                        if (lowerCategory.includes('additional')) return moduleThumbnails["Additional Features"]
+                        if (lowerCategory.includes('ai')) return moduleThumbnails["AI tools"]
+                        
+                        // Default fallback
+                        return "/Main-EOXS-landing.jpg"
+                      }
+                      
+                      const imgSrc = getModuleThumbnail(module.category)
                       const handleClick = () => {
                         setExpandedModules([module.category])
                         setTimeout(() => {
@@ -1245,11 +1293,11 @@ export default function Dashboard() {
                           onClick={handleClick}
                           className="group text-left bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
                         >
-                          <div className="aspect-[6/4] bg-slate-100 overflow-hidden">
+                          <div className="aspect-[6/4] bg-slate-100 overflow-hidden flex items-center justify-center">
                             <img
                               src={imgSrc}
                               alt={displayName}
-                              className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-200"
+                              className="max-w-full max-h-full object-contain group-hover:scale-[1.02] transition-transform duration-200"
                             />
                           </div>
                           <div className="p-3">
