@@ -1229,27 +1229,33 @@ export default function Dashboard() {
               {modules.length > 0 && (
                 <div className="mb-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {modules.map((module) => {
+                    {modules.map((module, index) => {
                       const displayName = (moduleDisplayNames[module.category] || module.name).trim()
                       
-                      // Module thumbnail mapping
-                      const getModuleThumbnail = (category: string) => {
+                      // Module thumbnail mapping with ordered thumbnails (01, 02, 03, etc.)
+                      const getModuleThumbnail = (category: string, moduleIndex: number) => {
+                        // Use ordered thumbnails based on module position
+                        const thumbnailNumber = String(moduleIndex + 1).padStart(2, '0')
+                        const orderedThumbnail = `/${thumbnailNumber}.png`
+                        
+                        // Check if the ordered thumbnail exists, otherwise fallback to category-specific images
                         const moduleThumbnails: Record<string, string> = {
-                          "Sales Module": "/demo.jpg", // Sales-related image
-                          "Processing": "/forge-worker.jpg", // Manufacturing/processing image
-                          "Inventory Management": "/Main-EOXS-landing.jpg", // Business operations
-                          "Purchase": "/demo.jpg", // Business operations
-                          "Finance and Accounting": "/Main-EOXS-landing.jpg", // Business operations
-                          "Shipping and Receiving": "/forge-worker.jpg", // Logistics
-                          "CRM": "/demo.jpg", // Customer relationship
-                          "IT & Security": "/Main-EOXS-landing.jpg", // Technology
-                          "Advanced Analytics & Reporting": "/Main-EOXS-landing.jpg", // Analytics
-                          "Master Data Management": "/demo.jpg", // Data management
-                          "Contact Management": "/demo.jpg", // Contact management
-                          "QA Module": "/forge-worker.jpg", // Quality assurance
-                          "Company Introduction": "/Company Overview.png", // Company intro
-                          "Additional Features": "/Main-EOXS-landing.jpg", // Additional features
-                          "AI tools": "/Main-EOXS-landing.jpg", // AI tools
+                          "Sales Module": "/02.png", // First module
+                          "Processing": "/03.png", // Second module
+                          "Inventory Management": "/015.png", // Third module
+                          "Purchase": "/04.png", // Fourth module
+                          "Finance and Accounting": "/05.png", // Fifth module
+                          "Shipping and Receiving": "/06.png", // Sixth module
+                          "CRM": "/07.png", // Seventh module
+                          "IT & Security": "/08.png", // Eighth module
+                          "Advanced Analytics & Reporting": "/09.png", // Ninth module
+                          "Master Data Management": "/010.png", // Tenth module
+                          "Contact Management": "/011.png", // Eleventh module
+                          "QA Module": "/012.png", // Twelfth module
+                          "Company Introduction": "/01.png", // Company intro
+                          "Additional Features": "/013.png", // Additional features
+                          "AI tools": "/014.png", // AI tools
+                          "EOXS implementation Process": "/016.png", // EOXS implementation
                         }
                         
                         // Try exact match first
@@ -1275,11 +1281,11 @@ export default function Dashboard() {
                         if (lowerCategory.includes('additional')) return moduleThumbnails["Additional Features"]
                         if (lowerCategory.includes('ai')) return moduleThumbnails["AI tools"]
                         
-                        // Default fallback
-                        return "/Main-EOXS-landing.jpg"
+                        // Use ordered thumbnail as fallback
+                        return orderedThumbnail
                       }
                       
-                      const imgSrc = getModuleThumbnail(module.category)
+                      const imgSrc = getModuleThumbnail(module.category, index)
                       const handleClick = () => {
                         setExpandedModules([module.category])
                         setTimeout(() => {
