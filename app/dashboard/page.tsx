@@ -1255,7 +1255,7 @@ export default function Dashboard() {
                           "Company Introduction": "/01.png", // Company intro
                           "Additional Features": "/013.png", // Additional features
                           "AI tools": "/014.png", // AI tools
-                          "EOXS implementation Process": "/016.png", // EOXS implementation
+                          "EOXS Implementation Process": "EOXS Implementation Process.png", // EOXS implementation
                         }
                         
                         // Try exact match first
