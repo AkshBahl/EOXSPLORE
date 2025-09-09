@@ -1225,77 +1225,126 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Module Image Tiles */}
+                {/* Flow-based Module Layout */}
               {modules.length > 0 && (
                 <div className="mb-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {modules.map((module, index) => {
-                      const displayName = (moduleDisplayNames[module.category] || module.name).trim()
-                      
-                      // Module thumbnail mapping with ordered thumbnails (01, 02, 03, etc.)
-                      const getModuleThumbnail = (category: string, moduleIndex: number) => {
-                        // Use ordered thumbnails based on module position
-                        const thumbnailNumber = String(moduleIndex + 1).padStart(2, '0')
-                        const orderedThumbnail = `/${thumbnailNumber}.png`
+                    <div className="grid grid-cols-4 gap-x-0 gap-y-1">
+                    {(() => {
+                      const tiles: JSX.Element[] = []
                         
-                        // Check if the ordered thumbnail exists, otherwise fallback to category-specific images
+                        // Create the exact grid flow pattern from your reference image
+                        const gridFlow = [
+                          // Row 1: Company Introduction → Quiz → Sales Module → Quiz
+                          { type: 'module', category: 'company introduction', row: 1, col: 1 },
+                          { type: 'quiz', row: 1, col: 2 },
+                          { type: 'module', category: 'sales module', row: 1, col: 3 },
+                          { type: 'quiz', row: 1, col: 4 },
+                          
+                          // Row 2: Inventory Management → Quiz → Processing Module → Quiz
+                          { type: 'module', category: 'inventory management', row: 2, col: 1 },
+                          { type: 'quiz', row: 2, col: 2 },
+                          { type: 'module', category: 'processing module', row: 2, col: 3 },
+                          { type: 'quiz', row: 2, col: 4 },
+                          
+                          // Row 3: Purchase → Quiz → CRM → Quiz
+                          { type: 'module', category: 'purchase', row: 3, col: 1 },
+                          { type: 'quiz', row: 3, col: 2 },
+                          { type: 'module', category: 'crm', row: 3, col: 3 },
+                          { type: 'quiz', row: 3, col: 4 },
+                          
+                          // Row 4: IT & Security → Quiz → Advanced Analytics → Quiz
+                          { type: 'module', category: 'it & security', row: 4, col: 1 },
+                          { type: 'quiz', row: 4, col: 2 },
+                          { type: 'module', category: 'advanced analytics & reporting', row: 4, col: 3 },
+                          { type: 'quiz', row: 4, col: 4 },
+                          
+                          // Row 5: Contact Management → Quiz → Master Data Management → Quiz
+                          { type: 'module', category: 'contact management', row: 5, col: 1 },
+                          { type: 'quiz', row: 5, col: 2 },
+                          { type: 'module', category: 'master data management', row: 5, col: 3 },
+                          { type: 'quiz', row: 5, col: 4 },
+                          
+                          // Row 6: QA → Quiz → Additional Features → Quiz
+                          { type: 'module', category: 'qa module', row: 6, col: 1 },
+                          { type: 'quiz', row: 6, col: 2 },
+                          { type: 'module', category: 'additional features', row: 6, col: 3 },
+                          { type: 'quiz', row: 6, col: 4 },
+                          
+                          // Row 7: Customer Testimonial → Quiz → AI Tools → Quiz
+                          { type: 'module', category: 'customer testimonial', row: 7, col: 1 },
+                          { type: 'quiz', row: 7, col: 2 },
+                          { type: 'module', category: 'ai tools', row: 7, col: 3 },
+                          { type: 'quiz', row: 7, col: 4 },
+                          
+                          // Row 8: EOXS Implementation Process → Quiz
+                          { type: 'module', category: 'eoxs implementation process', row: 8, col: 1 },
+                          { type: 'quiz', row: 8, col: 2 },
+                          { type: 'empty', row: 8, col: 3 },
+                          { type: 'empty', row: 8, col: 4 }
+                        ]
+
+                        // Module thumbnail mapping
+                        const getModuleThumbnail = (category: string) => {
                         const moduleThumbnails: Record<string, string> = {
-                          "Sales Module": "/02.png", // First module
-                          "Processing": "/03.png", // Second module
-                          "Inventory Management": "/015.png", // Third module
-                          "Purchase": "/04.png", // Fourth module
-                          "Finance and Accounting": "/05.png", // Fifth module
-                          "Shipping and Receiving": "/06.png", // Sixth module
-                          "CRM": "/07.png", // Seventh module
-                          "IT & Security": "/08.png", // Eighth module
-                          "Advanced Analytics & Reporting": "/09.png", // Ninth module
-                          "Master Data Management": "/010.png", // Tenth module
-                          "Contact Management": "/011.png", // Eleventh module
-                          "QA Module": "/012.png", // Twelfth module
-                          "Company Introduction": "/01.png", // Company intro
-                          "Additional Features": "/013.png", // Additional features
-                          "AI tools": "/014.png", // AI tools
-                          "EOXS Implementation Process": "EOXS Implementation Process.png", // EOXS implementation
+                            "company introduction": "/01.png",
+                            "sales module": "/02.png",
+                            "inventory management": "/015.png",
+                            "processing module": "/03.png",
+                            "purchase": "/04.png",
+                            "finance and accounting": "/05.png",
+                            "crm": "/07.png",
+                            "shipping and receiving": "/06.png",
+                            "it & security": "/08.png",
+                            "advanced analytics & reporting": "/09.png",
+                            "contact management": "/011.png",
+                            "master data management": "/010.png",
+                            "qa module": "/012.png",
+                            "additional features": "/013.png",
+                            "customer testimonial": "/017.png",
+                            "ai tools": "/014.png",
+                            "eoxs implementation process": "/EOXS Implementation Process.png"
                         }
                         
                         // Try exact match first
-                        if (moduleThumbnails[category]) {
-                          return moduleThumbnails[category]
+                          if (moduleThumbnails[category.toLowerCase()]) {
+                            return moduleThumbnails[category.toLowerCase()]
                         }
                         
-                        // Try partial matches
+                          // Try partial matches for common variations
                         const lowerCategory = category.toLowerCase()
-                        if (lowerCategory.includes('sales')) return moduleThumbnails["Sales Module"]
-                        if (lowerCategory.includes('processing')) return moduleThumbnails["Processing"]
-                        if (lowerCategory.includes('inventory')) return moduleThumbnails["Inventory Management"]
-                        if (lowerCategory.includes('purchase')) return moduleThumbnails["Purchase"]
-                        if (lowerCategory.includes('finance')) return moduleThumbnails["Finance and Accounting"]
-                        if (lowerCategory.includes('shipping')) return moduleThumbnails["Shipping and Receiving"]
-                        if (lowerCategory.includes('crm')) return moduleThumbnails["CRM"]
-                        if (lowerCategory.includes('security') || lowerCategory.includes('it')) return moduleThumbnails["IT & Security"]
-                        if (lowerCategory.includes('analytics') || lowerCategory.includes('reporting')) return moduleThumbnails["Advanced Analytics & Reporting"]
-                        if (lowerCategory.includes('master data')) return moduleThumbnails["Master Data Management"]
-                        if (lowerCategory.includes('contact')) return moduleThumbnails["Contact Management"]
-                        if (lowerCategory.includes('qa')) return moduleThumbnails["QA Module"]
-                        if (lowerCategory.includes('company')) return moduleThumbnails["Company Introduction"]
-                        if (lowerCategory.includes('additional')) return moduleThumbnails["Additional Features"]
-                        if (lowerCategory.includes('ai')) return moduleThumbnails["AI tools"]
-                        
-                        // Use ordered thumbnail as fallback
-                        return orderedThumbnail
-                      }
-                      
-                      const imgSrc = getModuleThumbnail(module.category, index)
+                          if (lowerCategory.includes('finance')) return "/05.png"
+                          if (lowerCategory.includes('purchase')) return "/04.png"
+                          if (lowerCategory.includes('crm')) return "/07.png"
+                          if (lowerCategory.includes('security') || lowerCategory.includes('it')) return "/08.png"
+                          if (lowerCategory.includes('contact')) return "/011.png"
+                          if (lowerCategory.includes('qa')) return "/012.png"
+                          
+                          return "/placeholder.svg"
+                        }
+
+                        gridFlow.forEach((item, index) => {
+                          if (item.type === 'module') {
+                            // Find the matching module
+                            const module = modules.find(m => 
+                              m.category.toLowerCase().includes(item.category?.toLowerCase() || '') ||
+                              (item.category?.toLowerCase() || '').includes(m.category.toLowerCase())
+                            )
+                            
+                            if (module) {
+                              const displayName = (moduleDisplayNames[module.category] || module.name).trim()
+                              const imgSrc = getModuleThumbnail(module.category)
+                              
                       const handleClick = () => {
                         setExpandedModules([module.category])
                         setTimeout(() => {
-                          const el = document.getElementById(`module-${module.category.replace(/\\s+/g, '-').toLowerCase()}`)
+                                  const el = document.getElementById(`module-${module.category.replace(/\s+/g, '-').toLowerCase()}`)
                           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
                         }, 50)
                       }
-                      return (
+                              
+                      tiles.push(
                         <button
-                          key={module.category}
+                                  key={`module-${index}`}
                           onClick={handleClick}
                           className="group text-left bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
                         >
@@ -1312,7 +1361,56 @@ export default function Dashboard() {
                           </div>
                         </button>
                       )
-                    })}
+                            }
+                          } else if (item.type === 'quiz') {
+                            // Add quiz button with connectors
+                        tiles.push(
+                              <div key={`quiz-${index}`} className="bg-transparent flex flex-col items-center justify-center p-1">
+                                <div className="w-full flex items-center justify-center relative">
+                                  {/* Horizontal connectors (desktop only) */}
+                                  <div className="hidden md:block absolute top-1/2 left-0 translate-y-[-50%] h-[2px] bg-gray-300" style={{ width: 'calc(50% - 45px)' }} />
+                                  <div className="hidden md:block absolute top-1/2 right-0 translate-y-[-50%] h-[2px] bg-gray-300" style={{ width: 'calc(50% - 45px)' }} />
+                                  <button className="w-[70px] h-[70px] sm:w-[80px] sm:h-[80px] md:w-[90px] md:h-[90px] rounded-full flex items-center justify-center">
+                                    <div className="w-full h-full rounded-full bg-green-600 flex items-center justify-center shadow-inner">
+                                      {/* Speech bubble */}
+                                      <div className="relative flex items-center justify-center bg-white rounded-full text-center"
+                                        style={{ width: '75%', height: '75%' }}>
+                                        {/* Tail positioned to lower-left like reference image */}
+                                        <div className="absolute"
+                                          style={{
+                                            left: '28%',
+                                            bottom: '-4%',
+                                            transform: 'translateX(-50%) rotate(270deg)',
+                                            width: 0,
+                                            height: 0,
+                                            borderLeft: '6px solid transparent',
+                                            borderRight: '6px solid transparent',
+                                            borderTop: '11px solid white'
+                                          }}
+                                        />
+                                        <span className="text-green-700 font-extrabold tracking-wide"
+                                          style={{ fontSize: '0.8rem' }}>QUIZ</span>
+                              </div>
+                            </div>
+                                  </button>
+                            </div>
+                                <div className="mt-1 text-center">
+                                  <div className="font-semibold text-slate-800">Quiz</div>
+                                </div>
+                              </div>
+                            )
+                          } else if (item.type === 'empty') {
+                            // Add empty space for grid alignment
+                            tiles.push(
+                              <div key={`empty-${index}`} className="bg-transparent flex flex-col items-center justify-center p-1">
+                                <div className="w-full h-full"></div>
+                          </div>
+                        )
+                      }
+                    })
+
+                    return tiles
+                  })()}
                   </div>
                 </div>
               )}
