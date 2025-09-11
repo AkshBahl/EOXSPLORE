@@ -158,6 +158,7 @@ export default function Dashboard() {
   const [categoryOrders, setCategoryOrders] = useState<Record<string, string[]>>({})
   const [moduleOrders, setModuleOrders] = useState<Record<string, number>>({})
   const [moduleDisplayNames, setModuleDisplayNames] = useState<Record<string, string>>({})
+  const [quizResults, setQuizResults] = useState<Record<string, { score: number; passed: boolean }>>({})
 
   // XP Reward Popup states
   const [showXPReward, setShowXPReward] = useState(false)
@@ -208,6 +209,8 @@ export default function Dashboard() {
       if (currentUser) {
         setUser(currentUser)
         fetchVideos(currentUser.uid)
+        // Load quiz results for gating
+        fetchQuizResults(currentUser.uid)
         // Reset dismissal on fresh login session
         try {
           sessionStorage.removeItem(`dismiss_suspension_${currentUser.uid}`)
@@ -520,6 +523,27 @@ export default function Dashboard() {
         description: "Failed to load videos. Please try again.",
         variant: "destructive",
       })
+    }
+  }
+
+  // Load user's quiz results for all modules
+  const fetchQuizResults = async (userId: string) => {
+    try {
+      const resultsQuery = query(
+        collection(db, "quizResults"),
+        where("userId", "==", userId)
+      )
+      const snapshot = await getDocs(resultsQuery)
+      const map: Record<string, { score: number; passed: boolean }> = {}
+      snapshot.forEach((d) => {
+        const data = d.data() as any
+        if (data.moduleId) {
+          map[data.moduleId] = { score: data.score || 0, passed: !!data.passed }
+        }
+      })
+      setQuizResults(map)
+    } catch (e) {
+      console.error("Failed to load quiz results", e)
     }
   }
 
@@ -1231,6 +1255,22 @@ export default function Dashboard() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {modules.map((module, index) => {
                       const displayName = (moduleDisplayNames[module.category] || module.name).trim()
+                      const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+                      const moduleId = slugify(module.category)
+                      const hasWatchedAll = module.videos.every(v => v.watched)
+                      const quizForModule = quizResults[moduleId]
+                      const hasPassedQuiz = quizForModule?.passed === true
+
+                      // Determine gating: previous module must be completed to unlock this one
+                      const isPrevCompleted = () => {
+                        if (index === 0) return true
+                        const prev = modules[index - 1]
+                        const prevId = slugify(prev.category)
+                        const prevWatched = prev.videos.every(v => v.watched)
+                        const prevPassed = quizResults[prevId]?.passed === true
+                        return prevWatched && prevPassed
+                      }
+                      const unlocked = isPrevCompleted()
                       
                       // Module thumbnail mapping with ordered thumbnails (01, 02, 03, etc.)
                       const getModuleThumbnail = (category: string, moduleIndex: number) => {
@@ -1255,7 +1295,9 @@ export default function Dashboard() {
                           "Company Introduction": "/01.png", // Company intro
                           "Additional Features": "/013.png", // Additional features
                           "AI tools": "/014.png", // AI tools
-                          "EOXS Implementation Process": "EOXS Implementation Process.png", // EOXS implementation
+                          "EOXS Implementation Process": "/EOXS Implementation Process.png", // EOXS implementation
+                          "Customer Testimonial Module": "/017.png", // Customer testimonial (exact)
+                          "Customer Testimonial": "/017.png", // Customer testimonial (category without "Module")
                         }
                         
                         // Try exact match first
@@ -1280,6 +1322,7 @@ export default function Dashboard() {
                         if (lowerCategory.includes('company')) return moduleThumbnails["Company Introduction"]
                         if (lowerCategory.includes('additional')) return moduleThumbnails["Additional Features"]
                         if (lowerCategory.includes('ai')) return moduleThumbnails["AI tools"]
+                        if (lowerCategory.includes('testimonial')) return moduleThumbnails["Customer Testimonial"]
                         
                         // Use ordered thumbnail as fallback
                         return orderedThumbnail
@@ -1287,6 +1330,7 @@ export default function Dashboard() {
                       
                       const imgSrc = getModuleThumbnail(module.category, index)
                       const handleClick = () => {
+                        if (!unlocked) return
                         setExpandedModules([module.category])
                         setTimeout(() => {
                           const el = document.getElementById(`module-${module.category.replace(/\\s+/g, '-').toLowerCase()}`)
@@ -1294,23 +1338,41 @@ export default function Dashboard() {
                         }, 50)
                       }
                       return (
-                        <button
-                          key={module.category}
-                          onClick={handleClick}
-                          className="group text-left bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
-                        >
-                          <div className="aspect-[6/4] bg-slate-100 overflow-hidden flex items-center justify-center">
-                            <img
-                              src={imgSrc}
-                              alt={displayName}
-                              className="max-w-full max-h-full object-contain group-hover:scale-[1.02] transition-transform duration-200"
-                            />
-                          </div>
-                          <div className="p-3">
-                            <div className="font-semibold text-slate-800 truncate">{displayName}</div>
-                            <div className="text-xs text-slate-500 mt-1">{module.videos.length} videos • {module.totalDuration}</div>
-                          </div>
-                        </button>
+                        <div key={module.category} className="flex flex-col gap-2">
+                          <button
+                            onClick={handleClick}
+                            disabled={!unlocked}
+                            className={`group text-left bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm transition-all duration-200 ${unlocked ? 'hover:shadow-md' : 'opacity-50 cursor-not-allowed'}`}
+                          >
+                            <div className="aspect-[6/4] bg-slate-100 overflow-hidden flex items-center justify-center relative">
+                              {!unlocked && (
+                                <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-center justify-center text-slate-700 text-sm font-medium">
+                                  Locked • Pass previous quiz (≥75%)
+                                </div>
+                              )}
+                              <img
+                                src={imgSrc}
+                                alt={displayName}
+                                className="max-w-full max-h-full object-contain group-hover:scale-[1.02] transition-transform duration-200"
+                              />
+                            </div>
+                            <div className="p-3">
+                              <div className="font-semibold text-slate-800 truncate">{displayName}</div>
+                              <div className="text-xs text-slate-500 mt-1">{module.videos.length} videos • {module.totalDuration}</div>
+                              <div className="text-xs mt-1">
+                                <span className={hasWatchedAll ? 'text-green-600' : 'text-slate-500'}>{hasWatchedAll ? 'All videos watched' : 'Watch all videos'}</span>
+                                <span> • </span>
+                                <span className={hasPassedQuiz ? 'text-green-600' : 'text-slate-500'}>{hasPassedQuiz ? `Quiz passed (${Math.round((quizForModule?.score || 0) * 100)}%)` : 'Quiz pending'}</span>
+                              </div>
+                            </div>
+                          </button>
+                          {/* Quiz button for this module */}
+                          <Link href={`/quiz/${moduleId}`}>
+                            <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+                              {hasPassedQuiz ? 'Retake Quiz' : 'Take Quiz'}: {displayName}
+                            </Button>
+                          </Link>
+                        </div>
                       )
                     })}
                   </div>
