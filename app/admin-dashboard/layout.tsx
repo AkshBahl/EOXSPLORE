@@ -17,6 +17,7 @@ const navigation = [
   { name: "Dashboard", href: "/admin-dashboard", icon: LayoutDashboard },
   { name: "Videos", href: "/admin-dashboard/videos", icon: Video },
   { name: "Modules", href: "/admin-dashboard/modules", icon: BookOpen },
+  { name: "Quizzes", href: "/admin-dashboard/quizzes", icon: BookOpen },
   { name: "Upload", href: "/admin-dashboard/upload", icon: Upload },
   { name: "Feedback", href: "/admin-dashboard/feedback", icon: MessageSquare },
   { name: "Individual", href: "/admin-dashboard/individual", icon: LineChart },
