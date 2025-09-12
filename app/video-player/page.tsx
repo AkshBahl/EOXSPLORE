@@ -1694,6 +1694,20 @@ export default function VideoPlayerPage() {
                 moduleName: moduleCompletion.moduleName
               });
               setShowXPReward(true);
+              
+              // Check if auto-quiz is enabled and redirect to quiz
+              const urlParams = new URLSearchParams(window.location.search);
+              const autoQuiz = urlParams.get('autoQuiz');
+              const moduleCategory = urlParams.get('moduleCategory');
+              
+              if (autoQuiz === 'true' && moduleCategory) {
+                // Redirect to quiz after showing module completion reward
+                setTimeout(() => {
+                  const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                  const moduleId = slugify(moduleCategory);
+                  router.push(`/quiz/${moduleId}`);
+                }, 3000); // Wait 3 seconds to show the reward
+              }
             }, 2000); // Show module reward 2 seconds after video reward
           }
         }

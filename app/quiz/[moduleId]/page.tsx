@@ -181,7 +181,7 @@ export default function ModuleQuizPage({ params }: { params: Promise<{ moduleId:
             <div className="text-2xl font-semibold text-green-700">Quiz Passed!</div>
             <div className="mt-2 text-slate-600">You have passed the quiz. Continue to the next module.</div>
             <div className="mt-5 flex items-center justify-center gap-3">
-              <Button onClick={() => router.push('/dashboard?view=classic')} className="bg-green-600 hover:bg-green-700">Continue to Next Module</Button>
+              <Button onClick={() => router.push('/dashboard')} className="bg-green-600 hover:bg-green-700">Continue to Next Module</Button>
               <Button variant="outline" onClick={() => setResult(null)}>Stay</Button>
             </div>
           </div>

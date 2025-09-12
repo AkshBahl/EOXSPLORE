@@ -73,6 +73,7 @@ export default function GamifiedDashboard() {
   const [categoryOrders, setCategoryOrders] = useState<Record<string, string[]>>({})
 
   const [showChallengeMode, setShowChallengeMode] = useState(false)
+  const [isContinueLoading, setIsContinueLoading] = useState(false)
 
   // Function to switch to classic dashboard view
   const switchToClassicView = () => {
@@ -83,14 +84,13 @@ export default function GamifiedDashboard() {
   // Generate daily reminder based on user progress
   useEffect(() => {
     if (userProgress) {
-      const suggestions = [
-        "Just 5 minutes to finish the Inventory module!",
-        "Keep your streak alive - watch one video today!",
-        "You're close to leveling up - complete a quiz!",
-        "Try the Processing module for 50 XP!",
-        "Your streak is impressive - maintain it today!"
-      ]
-      setDailyReminder(suggestions[Math.floor(Math.random() * suggestions.length)])
+      const suggestions: string[] = []
+      // Don't set daily reminder if no suggestions available
+      if (suggestions.length > 0) {
+        setDailyReminder(suggestions[Math.floor(Math.random() * suggestions.length)])
+      } else {
+        setDailyReminder("")
+      }
     }
   }, [userProgress])
 
@@ -340,29 +340,43 @@ export default function GamifiedDashboard() {
   }
 
   const handleContinueLearning = async () => {
-    // Check if user is authenticated
-    if (!auth.currentUser) {
-      console.log("No authenticated user, redirecting to login");
-      router.push("/login");
-      return;
-    }
-
-    const userId = auth.currentUser.uid;
-    if (!userId) {
-      console.log("No user ID available, redirecting to dashboard");
-      router.push("/dashboard");
-      return;
-    }
-
-    if (!userData) {
-      console.log("No user data available, redirecting to dashboard");
-      router.push("/dashboard");
-      return;
-    }
+    setIsContinueLoading(true);
 
     try {
+      // Check if user is authenticated
+      if (!auth.currentUser) {
+        console.log("No authenticated user, redirecting to login");
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to continue learning.",
+          variant: "destructive"
+        });
+        router.push("/login");
+        return;
+      }
+
+      const userId = auth.currentUser.uid;
+      if (!userId) {
+        console.log("No user ID available");
+        toast({
+          title: "Error",
+          description: "Unable to identify user. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!userData) {
+        console.log("No user data available");
+        toast({
+          title: "Loading",
+          description: "Please wait while we load your data...",
+        });
+        return;
+      }
+
       console.log("Finding last watched video for user:", userId);
-      
+
       // Query for all watch events for this user
       const watchHistoryQuery = query(
         collection(db, "videoWatchEvents"),
@@ -372,9 +386,20 @@ export default function GamifiedDashboard() {
       const watchHistorySnapshot = await getDocs(watchHistoryQuery);
 
       if (watchHistorySnapshot.empty) {
-        console.log("No watch history found, redirecting to dashboard");
-        // No watch history, redirect to dashboard
-        router.push("/dashboard");
+        console.log("No watch history found, starting with first module");
+        toast({
+          title: "Welcome!",
+          description: "Starting your learning journey with the first module.",
+        });
+
+        // Start with the first available module instead of redirecting to dashboard
+        const firstModule = allVideos.find(video => video.category === "Sales Module");
+        if (firstModule) {
+          startModuleFromCategory("Sales Module");
+        } else {
+          // Fallback to classic view if no Sales Module found
+          switchToClassicView();
+        }
         return;
       }
 
@@ -390,6 +415,18 @@ export default function GamifiedDashboard() {
       });
 
       const lastWatchedEvent = events[0] as any;
+
+      if (!lastWatchedEvent.videoId) {
+        console.error("No videoId found in last watched event");
+        toast({
+          title: "Error",
+          description: "Unable to find your last watched video. Starting fresh!",
+          variant: "destructive"
+        });
+        switchToClassicView();
+        return;
+      }
+
       const lastVideoId = lastWatchedEvent.videoId;
       const lastPosition = lastWatchedEvent.lastPosition || 0;
 
@@ -401,14 +438,38 @@ export default function GamifiedDashboard() {
         playlistId = lastWatchedEvent.playlistId;
       }
 
+      // Verify the video exists before redirecting
+      const videoExists = allVideos.some(video => video.id === lastVideoId);
+      if (!videoExists) {
+        console.log("Video not found in current video list, starting fresh");
+        toast({
+          title: "Video Not Found",
+          description: "Starting your learning journey from the beginning.",
+        });
+        switchToClassicView();
+        return;
+      }
+
       // Redirect to the video player with the last watched video and position
       const videoPlayerUrl = `/video-player?videoId=${lastVideoId}&playlistId=${playlistId}&resume=true&position=${lastPosition}`;
       console.log("Redirecting to:", videoPlayerUrl);
+
+      toast({
+        title: "Resuming Learning",
+        description: "Continuing where you left off!",
+      });
+
       router.push(videoPlayerUrl);
     } catch (error) {
       console.error("Error finding last watched video:", error);
-      // Fallback to dashboard
-      router.push("/dashboard");
+      toast({
+        title: "Error",
+        description: "Unable to continue learning. Starting fresh!",
+        variant: "destructive"
+      });
+      switchToClassicView();
+    } finally {
+      setIsContinueLoading(false);
     }
   };
 
@@ -493,6 +554,49 @@ export default function GamifiedDashboard() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Prominent Start Learning Button */}
+        <div className="mb-6">
+          <Card className="bg-gradient-to-r from-green-600 to-blue-600 text-white border-0 shadow-xl">
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-center sm:text-left">
+                  <h2 className="text-2xl font-bold text-white mb-2">🚀 Ready to Start Learning?</h2>
+                  <p className="text-white/90">Begin your educational journey with EOXS modules and earn XP as you progress!</p>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleContinueLearning}
+                    disabled={isContinueLoading}
+                    className="bg-white text-green-600 hover:bg-gray-100 hover:text-green-700 font-semibold px-6 py-3 shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-70"
+                    size="lg"
+                  >
+                    {isContinueLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent mr-2"></div>
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-2 h-5 w-5" />
+                        Continue Learning
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={switchToClassicView}
+                    variant="outline"
+                    className="border-white text-white bg-white/20 hover:bg-white hover:text-green-600 font-semibold px-6 py-3 shadow-lg hover:shadow-xl transition-all duration-200"
+                    size="lg"
+                  >
+                    <BookOpen className="mr-2 h-5 w-5" />
+                    Browse Modules
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Progress & Stats */}

@@ -132,11 +132,11 @@ export default function LearningPath({ modules, onModuleClick }: LearningPathPro
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 px-4 md:px-6">
       {/* Header */}
       <div className="text-center">
-        <h2 className="text-3xl font-bold mb-2">Your Learning Journey</h2>
-        <p className="text-muted-foreground">
+        <h2 className="text-2xl md:text-3xl font-bold mb-2">Your Learning Journey</h2>
+        <p className="text-sm md:text-base text-muted-foreground">
           Progress through modules to unlock new content and earn rewards
         </p>
       </div>
@@ -144,21 +144,21 @@ export default function LearningPath({ modules, onModuleClick }: LearningPathPro
       {/* Current Progress */}
       {userProgress && (
         <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-0">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold">
+          <CardContent className="p-4 md:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
+              <div className="flex-1">
+                <h3 className="text-base md:text-lg font-semibold">
                   {getLevelTitle(userProgress.currentLevel)} - Level {userProgress.currentLevel}
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs md:text-sm text-muted-foreground">
                   {userProgress.totalXP} XP • {userProgress.currentStreak} day streak
                 </p>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-blue-600">
+              <div className="text-center sm:text-right">
+                <div className="text-xl md:text-2xl font-bold text-blue-600">
                   {userProgress.totalVideosWatched}
                 </div>
-                <div className="text-sm text-muted-foreground">Videos Watched</div>
+                <div className="text-xs md:text-sm text-muted-foreground">Videos Watched</div>
               </div>
             </div>
             <Progress value={userProgress.totalVideosWatched / 50 * 100} className="h-2" />
@@ -168,8 +168,8 @@ export default function LearningPath({ modules, onModuleClick }: LearningPathPro
 
       {/* Learning Path Tree */}
       <div className="relative">
-        {/* Connection Lines */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none">
+        {/* Connection Lines - Hidden on mobile, shown on larger screens */}
+        <svg className="hidden md:block absolute inset-0 w-full h-full pointer-events-none">
           {modules.map((module, index) => {
             if (index < modules.length - 1) {
               return (
@@ -190,7 +190,7 @@ export default function LearningPath({ modules, onModuleClick }: LearningPathPro
         </svg>
 
         {/* Modules */}
-        <div className="relative space-y-8">
+        <div className="relative space-y-6 md:space-y-8">
           {modules.map((module, index) => (
             <motion.div
               key={module.id}
@@ -199,30 +199,32 @@ export default function LearningPath({ modules, onModuleClick }: LearningPathPro
               transition={{ delay: index * 0.1 }}
               className="flex justify-center"
             >
-              <Card 
-                className={`w-80 cursor-pointer transition-all duration-200 ${getModuleBorder(module)}`}
+              <Card
+                className={`w-full max-w-sm md:max-w-lg lg:w-80 cursor-pointer transition-all duration-200 ${getModuleBorder(module)}`}
                 onClick={() => handleModuleClick(module)}
               >
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${getModuleColor(module)} flex items-center justify-center text-white`}>
-                      <span className="text-xl">{module.icon}</span>
+                <CardContent className="p-4 md:p-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-4">
+                    <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-r ${getModuleColor(module)} flex items-center justify-center text-white flex-shrink-0`}>
+                      <span className="text-lg md:text-xl">{module.icon}</span>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{module.name}</h3>
-                      <p className="text-sm text-muted-foreground">{module.description}</p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm md:text-base">{module.name}</h3>
+                      <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">{module.description}</p>
                     </div>
-                    {getModuleIcon(module)}
+                    <div className="flex-shrink-0">
+                      {getModuleIcon(module)}
+                    </div>
                   </div>
 
                   {/* Module Stats */}
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-2 gap-3 md:gap-4 mb-4">
                     <div className="text-center">
-                      <div className="text-lg font-bold text-blue-600">{module.videoCount}</div>
+                      <div className="text-base md:text-lg font-bold text-blue-600">{module.videoCount}</div>
                       <div className="text-xs text-muted-foreground">Videos</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-lg font-bold text-green-600">{module.estimatedTime}</div>
+                      <div className="text-base md:text-lg font-bold text-green-600">{module.estimatedTime}</div>
                       <div className="text-xs text-muted-foreground">Duration</div>
                     </div>
                   </div>
@@ -288,46 +290,46 @@ export default function LearningPath({ modules, onModuleClick }: LearningPathPro
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-md"
+              className="w-full max-w-sm sm:max-w-md mx-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <span className="text-2xl">{selectedModule.icon}</span>
-                    {selectedModule.name}
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                    <span className="text-xl md:text-2xl">{selectedModule.icon}</span>
+                    <span className="text-sm md:text-base">{selectedModule.name}</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-muted-foreground">{selectedModule.description}</p>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 bg-blue-50 rounded-lg">
-                      <div className="text-lg font-bold text-blue-600">{selectedModule.videoCount}</div>
-                      <div className="text-sm text-muted-foreground">Videos</div>
+                <CardContent className="space-y-3 md:space-y-4">
+                  <p className="text-sm md:text-base text-muted-foreground">{selectedModule.description}</p>
+
+                  <div className="grid grid-cols-2 gap-3 md:gap-4">
+                    <div className="text-center p-2 md:p-3 bg-blue-50 rounded-lg">
+                      <div className="text-base md:text-lg font-bold text-blue-600">{selectedModule.videoCount}</div>
+                      <div className="text-xs md:text-sm text-muted-foreground">Videos</div>
                     </div>
-                    <div className="text-center p-3 bg-green-50 rounded-lg">
-                      <div className="text-lg font-bold text-green-600">{selectedModule.estimatedTime}</div>
-                      <div className="text-sm text-muted-foreground">Duration</div>
+                    <div className="text-center p-2 md:p-3 bg-green-50 rounded-lg">
+                      <div className="text-base md:text-lg font-bold text-green-600">{selectedModule.estimatedTime}</div>
+                      <div className="text-xs md:text-sm text-muted-foreground">Duration</div>
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-3 rounded-lg">
+                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-2 md:p-3 rounded-lg">
                     <div className="flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-yellow-600" />
-                      <span className="font-medium">Complete to earn {selectedModule.xpReward} XP</span>
+                      <Zap className="h-3 w-3 md:h-4 md:w-4 text-yellow-600" />
+                      <span className="text-sm md:text-base font-medium">Complete to earn {selectedModule.xpReward} XP</span>
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      variant="outline"
                       className="flex-1"
                       onClick={() => setSelectedModule(null)}
                     >
                       Cancel
                     </Button>
-                    <Button 
+                    <Button
                       className="flex-1"
                       onClick={() => {
                         router.push(`/dashboard?module=${selectedModule.name}`)

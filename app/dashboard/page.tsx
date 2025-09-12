@@ -377,6 +377,21 @@ export default function Dashboard() {
     }
   }, [])
 
+  // Refresh quiz results when returning from quiz page
+  useEffect(() => {
+    const handleFocus = () => {
+      if (user?.uid) {
+        fetchQuizResults(user.uid)
+      }
+    }
+
+    window.addEventListener('focus', handleFocus)
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [user])
+
 
 
   // Helper function to ensure valid URLs
@@ -903,6 +918,130 @@ export default function Dashboard() {
     router.push("/login")
   }
 
+  // Start module from category - similar to GamifiedDashboard
+  const startModuleFromCategory = async (category: string) => {
+    try {
+      console.log(`🎯 Starting module from category: "${category}"`)
+      
+      // Get all videos for the selected category
+      let moduleVideos = videos.filter((v) => v.category === category)
+      const moduleOrder = categoryOrders[category]
+      if (moduleOrder && moduleOrder.length > 0) {
+        moduleVideos = [...moduleVideos].sort((a, b) => {
+          const ia = moduleOrder.indexOf(a.id)
+          const ib = moduleOrder.indexOf(b.id)
+          const aPos = ia === -1 ? Number.MAX_SAFE_INTEGER : ia
+          const bPos = ib === -1 ? Number.MAX_SAFE_INTEGER : ib
+          return aPos - bPos
+        })
+      }
+      console.log(`📹 Found ${moduleVideos.length} videos for category "${category}":`, moduleVideos.map(v => v.title))
+      
+      if (moduleVideos.length === 0) {
+        console.log(`❌ No videos found for category "${category}"`)
+        toast({
+          title: "No Videos Found",
+          description: `No videos found for the ${category} module. Please try another module.`,
+          variant: "destructive"
+        })
+        return
+      }
+
+      // Get compulsory videos (Company Introduction, Additional Features, AI tools)
+      let companyIntroVideos = videos.filter((v) => v.category === "Company Introduction")
+      let additionalFeaturesVideos = videos.filter((v) => v.category === "Additional Features")
+      let aiToolsVideos = videos.filter((v) => 
+        v.category === "AI tools" || 
+        v.category === "AI Tools" || 
+        v.category === "ai tools" ||
+        v.category === "Artificial Intelligence" ||
+        v.category === "artificial intelligence"
+      )
+
+      // Apply saved order to compulsory categories as well
+      const applyOrder = (list: Video[], key: string) => {
+        const ord = categoryOrders[key]
+        if (!ord || ord.length === 0) return list
+        return [...list].sort((a, b) => {
+          const ia = ord.indexOf(a.id)
+          const ib = ord.indexOf(b.id)
+          const aPos = ia === -1 ? Number.MAX_SAFE_INTEGER : ia
+          const bPos = ib === -1 ? Number.MAX_SAFE_INTEGER : ib
+          return aPos - bPos
+        })
+      }
+
+      companyIntroVideos = applyOrder(companyIntroVideos, "Company Introduction")
+      additionalFeaturesVideos = applyOrder(additionalFeaturesVideos, "Additional Features")
+      aiToolsVideos = applyOrder(aiToolsVideos, "AI tools")
+
+      console.log(`📹 Compulsory videos found:`)
+      console.log(`   - Company Introduction: ${companyIntroVideos.length} videos`)
+      console.log(`   - Additional Features: ${additionalFeaturesVideos.length} videos`)
+      console.log(`   - AI tools: ${aiToolsVideos.length} videos`)
+
+      // Combine all videos in the proper order: Company Intro + Selected Module + Additional Features + AI Tools
+      const allPlaylistVideos = [
+        ...companyIntroVideos,
+        ...moduleVideos,
+        ...additionalFeaturesVideos,
+        ...aiToolsVideos,
+      ].map(v => ({
+        ...v,
+        // Ensure thumbnail field is populated for the video player poster
+        thumbnail: v.thumbnail || v.thumbnailUrl || (v.publicId ? getCloudinaryUrl((v as any).publicId, 'video') : undefined),
+      }))
+
+      console.log(`📋 Total playlist videos: ${allPlaylistVideos.length}`)
+      console.log(`📋 Playlist structure:`, allPlaylistVideos.map(v => `${v.category}: ${v.title}`))
+
+      // Find the first video of the selected module to start with
+      const firstModuleVideo = moduleVideos[0]
+      if (!firstModuleVideo) {
+        console.log(`❌ No first video found for module "${category}"`)
+        return
+      }
+
+      console.log(`🎬 Starting with video: "${firstModuleVideo.title}" (ID: ${firstModuleVideo.id})`)
+
+      // Create the playlist with all videos
+      const updatedPlaylist = {
+        id: "custom-playlist",
+        videos: allPlaylistVideos,
+        createdAt: { seconds: Date.now() / 1000, nanoseconds: 0 },
+      }
+      localStorage.setItem("currentPlaylist", JSON.stringify(updatedPlaylist))
+
+      // Store the user's selection to show only the selected module + compulsory modules
+      const selectedVideoIds = moduleVideos.map(v => v.id)
+      localStorage.setItem("selectedVideos", JSON.stringify(selectedVideoIds))
+
+      console.log(`💾 Stored selected video IDs:`, selectedVideoIds)
+      console.log(`💾 Selected videos details:`, moduleVideos.map(v => ({ id: v.id, title: v.title, category: v.category })))
+      console.log(`💾 Category being stored: "${category}"`)
+
+      const activePlaylist = {
+        id: "custom-playlist",
+        title: `${category} Module`,
+        lastAccessed: new Date().toISOString(),
+        completionPercentage: 0,
+      }
+      localStorage.setItem("activePlaylist", JSON.stringify(activePlaylist))
+
+      // Navigate to video player starting with the first video of the selected module
+      const videoPlayerUrl = `/video-player?videoId=${firstModuleVideo.id}&playlistId=custom-playlist&autoQuiz=true&moduleCategory=${encodeURIComponent(category)}`
+      console.log(`🚀 Navigating to: ${videoPlayerUrl}`)
+      router.push(videoPlayerUrl)
+    } catch (error) {
+      console.error("Error starting module from category:", error)
+      toast({
+        title: "Error",
+        description: "Failed to start the module. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
   useEffect(() => {
     if (globalCheckboxRef.current) {
       // Set indeterminate on the underlying input if present
@@ -1329,13 +1468,20 @@ export default function Dashboard() {
                       }
                       
                       const imgSrc = getModuleThumbnail(module.category, index)
-                      const handleClick = () => {
+                      const handleClick = async () => {
                         if (!unlocked) return
-                        setExpandedModules([module.category])
-                        setTimeout(() => {
-                          const el = document.getElementById(`module-${module.category.replace(/\\s+/g, '-').toLowerCase()}`)
-                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                        }, 50)
+                        
+                        try {
+                          // Start playing the module videos
+                          await startModuleFromCategory(module.category)
+                        } catch (error) {
+                          console.error("Error starting module:", error)
+                          toast({
+                            title: "Error",
+                            description: "Failed to start the module. Please try again.",
+                            variant: "destructive",
+                          })
+                        }
                       }
                       return (
                         <div key={module.category} className="flex flex-col gap-2">
