@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState, use as usePromise } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
+import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import { collection, getDocs, query, where, addDoc } from "firebase/firestore"
 import { auth, db } from "@/firebase"
@@ -17,9 +17,9 @@ interface QuizQuestion {
   correctIndex: number
 }
 
-export default function ModuleQuizPage({ params }: { params: Promise<{ moduleId: string }> }) {
+export default function ModuleQuizPage() {
   const router = useRouter()
-  const { moduleId } = usePromise(params)
+  const { moduleId } = useParams<{ moduleId: string }>()
   const [questions, setQuestions] = useState<QuizQuestion[]>([])
   const [answers, setAnswers] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
@@ -85,7 +85,16 @@ export default function ModuleQuizPage({ params }: { params: Promise<{ moduleId:
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
+    <div>
+      <header className="border-b sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+          <Link href="/dashboard?view=classic">
+            <img src="/Black logo.png" alt="EOXS Logo" className="h-8 w-auto" />
+          </Link>
+        </div>
+      </header>
+
+      <div className="max-w-3xl mx-auto p-6">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold">Quiz: {prettyModuleName}</h1>
         <Link href="/dashboard?view=classic"><Button variant="outline">Back to Dashboard</Button></Link>
@@ -181,12 +190,13 @@ export default function ModuleQuizPage({ params }: { params: Promise<{ moduleId:
             <div className="text-2xl font-semibold text-green-700">Quiz Passed!</div>
             <div className="mt-2 text-slate-600">You have passed the quiz. Continue to the next module.</div>
             <div className="mt-5 flex items-center justify-center gap-3">
-              <Button onClick={() => router.push('/dashboard')} className="bg-green-600 hover:bg-green-700">Continue to Next Module</Button>
+              <Button onClick={() => router.push('/dashboard?view=classic')} className="bg-green-600 hover:bg-green-700">Continue to Next Module</Button>
               <Button variant="outline" onClick={() => setResult(null)}>Stay</Button>
             </div>
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

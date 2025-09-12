@@ -27,11 +27,18 @@ export default function FirebaseDebug() {
         }
       }
 
-      // Get Firestore info
+      // Get Firestore info (avoid using private internals)
       if (db) {
-        info.firestore = {
-          app: db.app.name,
-          settings: db._delegate._databaseId
+        try {
+          const app = (db as any).app
+          const options = app?.options || {}
+          info.firestore = {
+            app: app?.name,
+            projectId: options.projectId,
+            apiKey: options.apiKey,
+          }
+        } catch (e) {
+          info.firestore = { error: 'Unable to read Firestore metadata safely' }
         }
       }
 
@@ -51,10 +58,10 @@ export default function FirebaseDebug() {
   }, [])
 
   const getIndexedDBInfo = async () => {
-    if ('indexedDB' in window) {
+    if (typeof window !== 'undefined' && 'indexedDB' in window && (indexedDB as any).databases) {
       try {
-        const databases = await indexedDB.databases()
-        return databases.map(db => db.name).filter(name => name?.includes('firebase'))
+        const databases = await (indexedDB as any).databases()
+        return databases.map((db: any) => db?.name).filter((name: string) => name?.includes('firebase'))
       } catch (error) {
         return ['Error getting IndexedDB info']
       }

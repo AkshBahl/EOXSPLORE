@@ -1274,16 +1274,7 @@ export default function VideoPlayerPage() {
     // Create a set of all categories for easy lookup
     const playlistCategories = new Set(allCategoriesInPlaylist)
 
-    // 1. ALWAYS add Company Introduction module first (COMPULSORY)
-    if (videosByCategory["Company Introduction"] && videosByCategory["Company Introduction"].length > 0) {
-      moduleArray.push({
-        name: "Company Introduction",
-        category: "Company Introduction",
-        videos: videosByCategory["Company Introduction"],
-      })
-      addedCategories.add("Company Introduction")
-      console.log("Added compulsory Company Introduction module")
-    }
+    // Do not force-add any modules. Only add modules that are present in the playlist data
 
     // 2. Add ALL modules found in the playlist (dynamic from dashboard)
     allCategoriesInPlaylist.forEach((category) => {
@@ -1315,44 +1306,7 @@ export default function VideoPlayerPage() {
       }
     })
 
-    // 5. ONLY add modules from playlist - NO other categories from previous selections
-    // This ensures only the modules that are actually in the current playlist are shown
-            // along with the compulsory modules (Company Introduction, Additional Features, AI tools)
-
-    // 6. ALWAYS add Additional Features module before AI tools (COMPULSORY)
-    if (!addedCategories.has("Additional Features")) {
-      moduleArray.push({
-        name: "Additional Features",
-        category: "Additional Features",
-        videos: videosByCategory["Additional Features"] || [],
-      })
-      addedCategories.add("Additional Features")
-      console.log("Added compulsory Additional Features module")
-    }
-
-    // 7. ALWAYS add AI tools module last (COMPULSORY)
-    const aiToolsVideos = videosByCategory["AI tools"] || 
-                         videosByCategory["AI Tools"] || 
-                         videosByCategory["ai tools"] ||
-                         videosByCategory["Artificial Intelligence"] ||
-                         videosByCategory["artificial intelligence"] ||
-                         []
-    
-    if (!addedCategories.has("AI tools")) {
-      moduleArray.push({
-        name: "AI tools",
-        category: "AI tools",
-        videos: aiToolsVideos,
-      })
-      addedCategories.add("AI tools")
-      console.log("Added compulsory AI tools module")
-    }
-    
-    if (aiToolsVideos.length > 0) {
-      console.log("AI tools module created with", aiToolsVideos.length, "videos")
-    } else {
-      console.log("AI tools module created with 0 videos (compulsory module)")
-    }
+    // Only modules present in the current playlist are included. No compulsory modules.
 
     setModules(moduleArray)
 
@@ -1361,15 +1315,11 @@ export default function VideoPlayerPage() {
 
     // Debug: Log all modules being created
     console.log("=== MODULES BEING CREATED ===")
-    console.log("📋 ONLY showing: Compulsory modules + Modules from playlist")
-    console.log("❌ NOT showing: Previous unfinished modules or other categories")
+    console.log("📋 ONLY showing modules from the current playlist")
+    console.log("❌ NOT showing previous unfinished modules or other categories")
     console.log("🎯 All modules found in playlist:", allCategoriesInPlaylist);
     moduleArray.forEach((module, index) => {
-      const isCompulsory = module.category === "Company Introduction" || 
-                           module.category === "Additional Features" || 
-                           module.category === "AI tools"
-      const moduleType = isCompulsory ? "COMPULSORY" : "FROM PLAYLIST"
-      console.log(`${index + 1}. ${module.name} (${module.category}) - ${module.videos.length} videos [${moduleType}]`)
+      console.log(`${index + 1}. ${module.name} (${module.category}) - ${module.videos.length} videos`)
     })
     console.log("=== END MODULES ===")
 
@@ -2132,51 +2082,48 @@ export default function VideoPlayerPage() {
   
   
 
+  // Find the next video within the current module and return its playlist index
+  const getNextIndexInCurrentModule = (): number | null => {
+    if (!currentVideo || !modules || !playlist || !playlist.videos) return null
+    const currentModuleIndex = modules.findIndex(module => module.videos.some(v => v.id === currentVideo.id))
+    if (currentModuleIndex === -1) return null
+    const currentModule = modules[currentModuleIndex]
+    const pos = currentModule.videos.findIndex(v => v.id === currentVideo.id)
+    if (pos === -1 || pos >= currentModule.videos.length - 1) return null
+    const nextModuleVideo = currentModule.videos[pos + 1]
+    const nextIndexInPlaylist = playlist.videos.findIndex(v => v.id === nextModuleVideo.id)
+    return nextIndexInPlaylist === -1 ? null : nextIndexInPlaylist
+  }
+
   const playNextVideo = () => {
-    if (
-      !playlist ||
-      !playlist.videos ||
-      !Array.isArray(playlist.videos) ||
-      playlist.videos.length === 0 ||
-      !currentVideo
-    )
+    if (!playlist || !Array.isArray(playlist.videos) || playlist.videos.length === 0 || !currentVideo) return
+    const nextIndex = getNextIndexInCurrentModule()
+    if (nextIndex === null) return
+    const nextVideo = playlist.videos[nextIndex]
+
+    if (!isVideoPlayable(nextIndex)) {
+      toast({
+        title: "Video Locked",
+        description: "Complete the current video to unlock the next one.",
+        variant: "destructive",
+        duration: 3000,
+      })
       return
+    }
 
-    const nextIndex = currentVideoIndex + 1
-    if (nextIndex < playlist.videos.length) {
-      const nextVideo = playlist.videos[nextIndex]
-      
-      // Check if the next video is playable (unlocked)
-      if (!isVideoPlayable(nextIndex)) {
-        toast({
-          title: "Video Locked",
-          description: "Complete the current video to unlock the next one.",
-          variant: "destructive",
-          duration: 3000,
-        })
-        return
-      }
+    videoChangeRef.current = true
+    setCurrentVideoIndex(nextIndex)
+    setCurrentVideo(nextVideo)
+    setProgress(0)
+    setCurrentTime(0)
 
-      // Only allow moving to the next video if it's unlocked
-      videoChangeRef.current = true
-      setCurrentVideoIndex(nextIndex)
-      setCurrentVideo(nextVideo)
-      setProgress(0)
-      setCurrentTime(0)
+    const newUrl = `/video-player?videoId=${nextVideo.id}&playlistId=${playlist.id}`
+    window.history.pushState({}, "", newUrl)
 
-      // Update URL without refreshing the page
-      const newUrl = `/video-player?videoId=${nextVideo.id}&playlistId=${playlist.id}`
-      window.history.pushState({}, "", newUrl)
-
-      // Update active module if needed
-      if (modules.length > 0) {
-        const moduleIndex = modules.findIndex((module) =>
-          module.videos.some((video) => video.id === nextVideo.id),
-        )
-
-        if (moduleIndex !== -1 && moduleIndex !== activeModuleIndex) {
-          setActiveModuleIndex(moduleIndex)
-        }
+    if (modules.length > 0) {
+      const moduleIndex = modules.findIndex((module) => module.videos.some((video) => video.id === nextVideo.id))
+      if (moduleIndex !== -1 && moduleIndex !== activeModuleIndex) {
+        setActiveModuleIndex(moduleIndex)
       }
     }
   }
@@ -3355,7 +3302,8 @@ export default function VideoPlayerPage() {
           </div>
           </div>
 
-        {/* Learning Modules Section - Moved to bottom */}
+        {false && (
+          /* Learning Modules widget disabled */
         <div className="mt-8 container mx-auto max-w-5xl">
             <Card className="rounded-lg shadow-sm">
               <CardContent className="p-4">
@@ -3475,6 +3423,7 @@ export default function VideoPlayerPage() {
               </CardContent>
             </Card>
         </div>
+        )}
       </main>
 
       {/* Video Info Dialog */}

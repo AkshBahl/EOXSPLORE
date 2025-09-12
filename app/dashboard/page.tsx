@@ -20,6 +20,7 @@ import { SidebarProvider, Sidebar } from "@/components/ui/sidebar"
 import { useAuth } from "../context/AuthContext"
 import { useGamification } from "../context/GamificationContext"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import GamifiedDashboard from "../components/GamifiedDashboard"
 import XPRewardPopup from "../components/XPRewardPopup"
 
@@ -159,6 +160,8 @@ export default function Dashboard() {
   const [moduleOrders, setModuleOrders] = useState<Record<string, number>>({})
   const [moduleDisplayNames, setModuleDisplayNames] = useState<Record<string, string>>({})
   const [quizResults, setQuizResults] = useState<Record<string, { score: number; passed: boolean }>>({})
+  const [showQuizPrompt, setShowQuizPrompt] = useState(false)
+  const [quizPromptModule, setQuizPromptModule] = useState<string | null>(null)
 
   // XP Reward Popup states
   const [showXPReward, setShowXPReward] = useState(false)
@@ -718,6 +721,34 @@ export default function Dashboard() {
     }
   }, [videos, organizeVideosIntoModules])
 
+  // Prompt to complete quiz for any module where all videos are watched but quiz not passed
+  useEffect(() => {
+    try {
+      if (modules.length === 0) return
+      const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+
+      // Find the earliest module (by current order) that is fully watched but quiz not passed
+      for (const module of modules) {
+        const allWatched = module.videos.length > 0 && module.videos.every(v => v.watched)
+        const slug = slugify(module.category)
+        const passed = quizResults[slug]?.passed === true
+        const suppressKey = `quizPrompt_${slug}_suppressed`
+        const suppressed = typeof window !== 'undefined' ? localStorage.getItem(suppressKey) === 'true' : false
+        if (allWatched && !passed && !suppressed) {
+          setQuizPromptModule(module.category)
+          setShowQuizPrompt(true)
+          return
+        }
+      }
+
+      // If none qualifies, ensure prompt is hidden
+      if (showQuizPrompt) {
+        setShowQuizPrompt(false)
+        setQuizPromptModule(null)
+      }
+    } catch {}
+  }, [modules, quizResults])
+
   const handleVideoSelection = (videoId: string) => {
     setSelectedVideos((prev) => {
       if (prev.includes(videoId)) {
@@ -947,6 +978,38 @@ export default function Dashboard() {
         return
       }
 
+      // If the user clicked the Company Introduction module, play ONLY that module's videos
+      if (category === "Company Introduction") {
+        const allPlaylistVideos = moduleVideos.map(v => ({
+          ...v,
+          thumbnail: (v as any).thumbnail || (v as any).thumbnailUrl || ((v as any).publicId ? getCloudinaryUrl((v as any).publicId, 'video') : undefined),
+        }))
+
+        const firstModuleVideo = moduleVideos[0]
+        if (!firstModuleVideo) return
+
+        const updatedPlaylist = {
+          id: "custom-playlist",
+          videos: allPlaylistVideos,
+          createdAt: { seconds: Date.now() / 1000, nanoseconds: 0 },
+        }
+        localStorage.setItem("currentPlaylist", JSON.stringify(updatedPlaylist))
+        localStorage.setItem("selectedVideos", JSON.stringify(moduleVideos.map(v => v.id)))
+
+        const activePlaylist = {
+          id: "custom-playlist",
+          title: `${category} Module`,
+          lastAccessed: new Date().toISOString(),
+          completionPercentage: 0,
+        }
+        localStorage.setItem("activePlaylist", JSON.stringify(activePlaylist))
+
+        const videoPlayerUrl = `/video-player?videoId=${firstModuleVideo.id}&playlistId=custom-playlist&moduleCategory=${encodeURIComponent(category)}`
+        console.log(`🚀 Navigating to: ${videoPlayerUrl}`)
+        router.push(videoPlayerUrl)
+        return
+      }
+
       // Get compulsory videos (Company Introduction, Additional Features, AI tools)
       let companyIntroVideos = videos.filter((v) => v.category === "Company Introduction")
       let additionalFeaturesVideos = videos.filter((v) => v.category === "Additional Features")
@@ -989,7 +1052,7 @@ export default function Dashboard() {
       ].map(v => ({
         ...v,
         // Ensure thumbnail field is populated for the video player poster
-        thumbnail: v.thumbnail || v.thumbnailUrl || (v.publicId ? getCloudinaryUrl((v as any).publicId, 'video') : undefined),
+        thumbnail: (v as any).thumbnail || v.thumbnailUrl || ((v as any).publicId ? getCloudinaryUrl((v as any).publicId, 'video') : undefined),
       }))
 
       console.log(`📋 Total playlist videos: ${allPlaylistVideos.length}`)
@@ -1328,7 +1391,7 @@ export default function Dashboard() {
               </Link>
             </div>
             
-            <Separator className="bg-green-500/30 mx-4" />
+            {/* Separator removed as requested */}
             
             {/* Quick Stats Section */}
             <div className="p-4 mt-auto">
@@ -1351,7 +1414,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-            </div>
+            </div>      
           </div>
         </aside>
       )}
@@ -1374,19 +1437,7 @@ export default function Dashboard() {
             {/* Suspension warning removed: suspension is manual-only now */}
             
             <div className="max-w-6xl mx-auto p-6">
-              {/* Enhanced Search and Actions Section */}
-              <div className="flex justify-end mb-4">
-                <div className="w-full lg:w-auto">
-                  <Button
-                    onClick={handleWatchSelected}
-                    disabled={selectedVideos.length === 0}
-                    className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 h-12 px-6"
-                  >
-                    <Play className="mr-2 h-4 w-4" />
-                    Watch Selected ({selectedVideos.length})
-                  </Button>
-                </div>
-              </div>
+              {/* Actions section removed: Watch Selected button */}
 
               {/* Module Image Tiles */}
               {modules.length > 0 && (
@@ -1493,7 +1544,7 @@ export default function Dashboard() {
                             <div className="aspect-[6/4] bg-slate-100 overflow-hidden flex items-center justify-center relative">
                               {!unlocked && (
                                 <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-center justify-center text-slate-700 text-sm font-medium">
-                                  Locked • Pass previous quiz (≥75%)
+                                  Locked
                                 </div>
                               )}
                               <img
@@ -1507,15 +1558,13 @@ export default function Dashboard() {
                               <div className="text-xs text-slate-500 mt-1">{module.videos.length} videos • {module.totalDuration}</div>
                               <div className="text-xs mt-1">
                                 <span className={hasWatchedAll ? 'text-green-600' : 'text-slate-500'}>{hasWatchedAll ? 'All videos watched' : 'Watch all videos'}</span>
-                                <span> • </span>
-                                <span className={hasPassedQuiz ? 'text-green-600' : 'text-slate-500'}>{hasPassedQuiz ? `Quiz passed (${Math.round((quizForModule?.score || 0) * 100)}%)` : 'Quiz pending'}</span>
                               </div>
                             </div>
                           </button>
                           {/* Quiz button for this module */}
                           <Link href={`/quiz/${moduleId}`}>
                             <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
-                              {hasPassedQuiz ? 'Retake Quiz' : 'Take Quiz'}: {displayName}
+                              {hasPassedQuiz ? 'Retake Quiz' : 'Take Quiz'}
                             </Button>
                           </Link>
                         </div>
@@ -1563,6 +1612,55 @@ export default function Dashboard() {
           moduleName={xpRewardData.moduleName}
           showConfetti={true}
         />
+      )}
+
+      {/* Quiz Prompt Modal */}
+      {showQuizPrompt && (
+        <Dialog open={showQuizPrompt} onOpenChange={(open) => {
+          if (!open) {
+            setShowQuizPrompt(false)
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Complete the quiz to continue</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2">
+              <p>You have completed all videos in {quizPromptModule}. Take the quiz to unlock the next module.</p>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  try {
+                    const key = 'quizPrompt_company-introduction_suppressed'
+                    localStorage.setItem(key, 'true')
+                  } catch {}
+                  setShowQuizPrompt(false)
+                }}
+              >
+                Later
+              </Button>
+              <Button
+                onClick={() => {
+                  try {
+                    if (quizPromptModule) {
+                      const slug = quizPromptModule.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+                      const key = `quizPrompt_${slug}_suppressed`
+                      localStorage.setItem(key, 'true')
+                      router.push(`/quiz/${slug}`)
+                      return
+                    }
+                  } catch {}
+                  router.push('/quiz')
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                Take Quiz
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )
