@@ -271,6 +271,9 @@ export default function VideoPlayerPage() {
   const [showResumeDialog, setShowResumeDialog] = useState(false);
   const [lastPosition, setLastPosition] = useState(0);
   const [moduleOrders, setModuleOrders] = useState<Record<string, number>>({});
+  // Quiz prompt when a module is completed
+  const [showQuizPrompt, setShowQuizPrompt] = useState(false)
+  const [quizPromptModule, setQuizPromptModule] = useState<string | null>(null)
   // const [showQuiz, setShowQuiz] = useState(false);
   // const [currentQuiz, setCurrentQuiz] = useState<any>(null);
 
@@ -647,7 +650,7 @@ export default function VideoPlayerPage() {
 
   // Add these new functions
   const handleResume = () => {
-    if (videoRef.current) {
+    if (videoRef.current && videoRef.current.isConnected) {
       videoRef.current.currentTime = lastPosition;
       videoRef.current.play()
         .then(() => {
@@ -663,7 +666,7 @@ export default function VideoPlayerPage() {
   };
 
   const handleStartFromBeginning = () => {
-    if (videoRef.current) {
+    if (videoRef.current && videoRef.current.isConnected) {
       videoRef.current.currentTime = 0;
       videoRef.current.play()
         .then(() => {
@@ -760,13 +763,13 @@ export default function VideoPlayerPage() {
   useEffect(() => {
     if (autoplay === "true" && resume !== "true" && currentVideo) {
       const attemptPlay = () => {
-        if (!videoRef.current) return
+        if (!videoRef.current || !videoRef.current.isConnected) return
         videoRef.current.play()
           .then(() => {
             setIsPlaying(true)
           })
           .catch(() => {
-            if (!videoRef.current) return
+            if (!videoRef.current || !videoRef.current.isConnected) return
             const previousMuted = videoRef.current.muted
             videoRef.current.muted = true
             videoRef.current.play()
@@ -780,7 +783,7 @@ export default function VideoPlayerPage() {
           })
       }
 
-      if (videoRef.current && videoRef.current.readyState >= 2) {
+      if (videoRef.current && videoRef.current.isConnected && videoRef.current.readyState >= 2) {
         attemptPlay()
       } else if (videoRef.current) {
         const onCanPlay = () => attemptPlay()
@@ -1521,7 +1524,7 @@ export default function VideoPlayerPage() {
   }
 
   const handleVideoPlay = () => {
-    if (videoRef.current && currentVideo) {
+    if (videoRef.current && videoRef.current.isConnected && currentVideo) {
       videoRef.current.play()
       setIsPlaying(true)
 
@@ -1644,6 +1647,15 @@ export default function VideoPlayerPage() {
                 moduleName: moduleCompletion.moduleName
               });
               setShowXPReward(true);
+              // Also show quiz prompt to continue progression AFTER the module completion popup
+              const urlParamsLocal = new URLSearchParams(window.location.search);
+              const autoQuizLocal = urlParamsLocal.get('autoQuiz');
+              if (autoQuizLocal !== 'true') {
+                setQuizPromptModule(moduleCompletion.moduleName || null)
+                setTimeout(() => {
+                  setShowQuizPrompt(true)
+                }, 3200) // slightly after auto-quiz delay window
+              }
               
               // Check if auto-quiz is enabled and redirect to quiz
               const urlParams = new URLSearchParams(window.location.search);
@@ -1841,18 +1853,20 @@ export default function VideoPlayerPage() {
     if (!user || !videoId) return
 
     try {
+      // Query without composite index; sort client-side
       const feedbackQuery = query(
         collection(db, "videoFeedbacks"),
-        where("videoId", "==", videoId),
-        orderBy("createdAt", "desc"),
+        where("videoId", "==", videoId)
       )
 
       const feedbackSnapshot = await getDocs(feedbackQuery)
-      const feedbacks = feedbackSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-      }))
+      const feedbacks = feedbackSnapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate() || new Date(),
+        }))
+        .sort((a: any, b: any) => b.createdAt - a.createdAt)
 
       setVideoFeedbacks(feedbacks)
     } catch (error) {
@@ -3583,6 +3597,49 @@ export default function VideoPlayerPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Quiz Prompt Modal (moved from dashboard) */}
+      {showQuizPrompt && (
+        <Dialog open={showQuizPrompt} onOpenChange={(open) => {
+          if (!open) {
+            setShowQuizPrompt(false)
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Complete the quiz to continue</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2">
+              <p>You have completed all videos in {quizPromptModule}. Take the quiz to unlock the next module.</p>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowQuizPrompt(false)
+                }}
+              >
+                Later
+              </Button>
+              <Button
+                onClick={() => {
+                  try {
+                    if (quizPromptModule) {
+                      const slug = quizPromptModule.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+                      setShowQuizPrompt(false)
+                      router.push(`/quiz/${slug}`)
+                      return
+                    }
+                  } catch {}
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                Take Quiz
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Video Quiz */}
       {/* {currentQuiz && (
         <VideoQuiz
@@ -3609,6 +3666,10 @@ export default function VideoPlayerPage() {
           onClose={() => {
             setShowXPReward(false);
             setXpRewardData(null);
+            // If module reward was just closed, open quiz prompt now
+            if (xpRewardData?.type === 'module' && quizPromptModule) {
+              setTimeout(() => setShowQuizPrompt(true), 200)
+            }
           }}
           xpAmount={xpRewardData.xpAmount}
           reason={xpRewardData.reason}

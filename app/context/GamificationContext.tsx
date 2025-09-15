@@ -469,7 +469,7 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
     if (userProgress.totalVideosWatched === 1 && !userProgress.badges.find(b => b.id === BADGES.FIRST_VIDEO.id)) {
       newBadges.push({
         ...BADGES.FIRST_VIDEO,
-        earnedAt: serverTimestamp()
+        earnedAt: new Date()
       })
     }
 
@@ -477,21 +477,21 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
     if (userProgress.currentStreak >= 3 && !userProgress.badges.find(b => b.id === BADGES.STREAK_3.id)) {
       newBadges.push({
         ...BADGES.STREAK_3,
-        earnedAt: serverTimestamp()
+        earnedAt: new Date()
       })
     }
 
     if (userProgress.currentStreak >= 7 && !userProgress.badges.find(b => b.id === BADGES.STREAK_7.id)) {
       newBadges.push({
         ...BADGES.STREAK_7,
-        earnedAt: serverTimestamp()
+        earnedAt: new Date()
       })
     }
 
     if (userProgress.currentStreak >= 30 && !userProgress.badges.find(b => b.id === BADGES.STREAK_30.id)) {
       newBadges.push({
         ...BADGES.STREAK_30,
-        earnedAt: serverTimestamp()
+        earnedAt: new Date()
       })
     }
 
@@ -500,7 +500,7 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
     if (perfectQuizzes >= 5 && !userProgress.badges.find(b => b.id === BADGES.QUIZ_MASTER.id)) {
       newBadges.push({
         ...BADGES.QUIZ_MASTER,
-        earnedAt: serverTimestamp()
+        earnedAt: new Date()
       })
     }
 
@@ -508,7 +508,7 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
     if (!userProgress.badges.find(b => b.id === BADGES.FEEDBACK_GIVER.id)) {
       newBadges.push({
         ...BADGES.FEEDBACK_GIVER,
-        earnedAt: serverTimestamp()
+        earnedAt: new Date()
       })
     }
 

@@ -36,6 +36,7 @@ import { getAllModuleVideoOrders } from "../firestore-utils"
 import { auth, db } from "@/firebase"
 
 import ChallengeMode from "./ChallengeMode"
+import { PieChart, Pie, Cell, Label, Tooltip, ResponsiveContainer } from "recharts"
 
 interface Video {
   id: string
@@ -71,9 +72,9 @@ export default function GamifiedDashboard() {
   const [videoProgress, setVideoProgress] = useState<{[key: string]: number}>({})
   const [allVideos, setAllVideos] = useState<Video[]>([])
   const [categoryOrders, setCategoryOrders] = useState<Record<string, string[]>>({})
+  const [watchedVideoIds, setWatchedVideoIds] = useState<Set<string>>(new Set())
 
   const [showChallengeMode, setShowChallengeMode] = useState(false)
-  const [isContinueLoading, setIsContinueLoading] = useState(false)
 
   // Function to switch to classic dashboard view
   const switchToClassicView = () => {
@@ -165,7 +166,14 @@ export default function GamifiedDashboard() {
         where("userId", "==", auth.currentUser.uid)
       )
       const watchHistorySnapshot = await getDocs(watchHistoryQuery)
-      const watchHistory = watchHistorySnapshot.docs.map(doc => doc.data())
+      const watchHistory = watchHistorySnapshot.docs.map(doc => doc.data() as any)
+
+      // Build a set of fully completed video IDs for consistent counting across UI
+      const completedIds = new Set<string>(
+        watchHistory
+          .filter((e: any) => e?.completed === true && typeof e.videoId === 'string')
+          .map((e: any) => e.videoId as string)
+      )
 
       // Calculate progress for each video
       const progressData: {[key: string]: number} = {}
@@ -189,6 +197,7 @@ export default function GamifiedDashboard() {
       setTopVideos(sortedVideos)
       setVideoProgress(progressData)
       setAllVideos(allVideos) // Store all videos for module counting
+      setWatchedVideoIds(completedIds)
 
       // Fetch saved per-module orders
       const orders = await getAllModuleVideoOrders()
@@ -339,139 +348,7 @@ export default function GamifiedDashboard() {
     }
   }
 
-  const handleContinueLearning = async () => {
-    setIsContinueLoading(true);
-
-    try {
-      // Check if user is authenticated
-      if (!auth.currentUser) {
-        console.log("No authenticated user, redirecting to login");
-        toast({
-          title: "Authentication Required",
-          description: "Please log in to continue learning.",
-          variant: "destructive"
-        });
-        router.push("/login");
-        return;
-      }
-
-      const userId = auth.currentUser.uid;
-      if (!userId) {
-        console.log("No user ID available");
-        toast({
-          title: "Error",
-          description: "Unable to identify user. Please try again.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (!userData) {
-        console.log("No user data available");
-        toast({
-          title: "Loading",
-          description: "Please wait while we load your data...",
-        });
-        return;
-      }
-
-      console.log("Finding last watched video for user:", userId);
-
-      // Query for all watch events for this user
-      const watchHistoryQuery = query(
-        collection(db, "videoWatchEvents"),
-        where("userId", "==", userId)
-      );
-
-      const watchHistorySnapshot = await getDocs(watchHistoryQuery);
-
-      if (watchHistorySnapshot.empty) {
-        console.log("No watch history found, starting with first module");
-        toast({
-          title: "Welcome!",
-          description: "Starting your learning journey with the first module.",
-        });
-
-        // Start with the first available module instead of redirecting to dashboard
-        const firstModule = allVideos.find(video => video.category === "Sales Module");
-        if (firstModule) {
-          startModuleFromCategory("Sales Module");
-        } else {
-          // Fallback to classic view if no Sales Module found
-          switchToClassicView();
-        }
-        return;
-      }
-
-      // Sort by lastWatchedAt manually to find the most recent
-      const events = watchHistorySnapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id
-      } as any)).sort((a: any, b: any) => {
-        // Handle different timestamp formats
-        const aTime = a.lastWatchedAt?.seconds || a.lastWatchedAt || a.watchedAt?.seconds || a.watchedAt || 0;
-        const bTime = b.lastWatchedAt?.seconds || b.lastWatchedAt || b.watchedAt?.seconds || b.watchedAt || 0;
-        return bTime - aTime;
-      });
-
-      const lastWatchedEvent = events[0] as any;
-
-      if (!lastWatchedEvent.videoId) {
-        console.error("No videoId found in last watched event");
-        toast({
-          title: "Error",
-          description: "Unable to find your last watched video. Starting fresh!",
-          variant: "destructive"
-        });
-        switchToClassicView();
-        return;
-      }
-
-      const lastVideoId = lastWatchedEvent.videoId;
-      const lastPosition = lastWatchedEvent.lastPosition || 0;
-
-      console.log("Found last watched video:", { lastVideoId, lastPosition });
-
-      // Check if the video is part of a playlist
-      let playlistId = "custom-playlist";
-      if (lastWatchedEvent.playlistId) {
-        playlistId = lastWatchedEvent.playlistId;
-      }
-
-      // Verify the video exists before redirecting
-      const videoExists = allVideos.some(video => video.id === lastVideoId);
-      if (!videoExists) {
-        console.log("Video not found in current video list, starting fresh");
-        toast({
-          title: "Video Not Found",
-          description: "Starting your learning journey from the beginning.",
-        });
-        switchToClassicView();
-        return;
-      }
-
-      // Redirect to the video player with the last watched video and position
-      const videoPlayerUrl = `/video-player?videoId=${lastVideoId}&playlistId=${playlistId}&resume=true&position=${lastPosition}`;
-      console.log("Redirecting to:", videoPlayerUrl);
-
-      toast({
-        title: "Resuming Learning",
-        description: "Continuing where you left off!",
-      });
-
-      router.push(videoPlayerUrl);
-    } catch (error) {
-      console.error("Error finding last watched video:", error);
-      toast({
-        title: "Error",
-        description: "Unable to continue learning. Starting fresh!",
-        variant: "destructive"
-      });
-      switchToClassicView();
-    } finally {
-      setIsContinueLoading(false);
-    }
-  };
+  
 
   const getLevelTitle = (level: number) => {
     const titles = [
@@ -566,24 +443,6 @@ export default function GamifiedDashboard() {
                 </div>
                 <div className="flex gap-3">
                   <Button
-                    onClick={handleContinueLearning}
-                    disabled={isContinueLoading}
-                    className="bg-white text-green-600 hover:bg-gray-100 hover:text-green-700 font-semibold px-6 py-3 shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-70"
-                    size="lg"
-                  >
-                    {isContinueLoading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent mr-2"></div>
-                        Loading...
-                      </>
-                    ) : (
-                      <>
-                        <Play className="mr-2 h-5 w-5" />
-                        Continue Learning
-                      </>
-                    )}
-                  </Button>
-                  <Button
                     onClick={switchToClassicView}
                     variant="outline"
                     className="border-white text-white bg-white/20 hover:bg-white hover:text-green-600 font-semibold px-6 py-3 shadow-lg hover:shadow-xl transition-all duration-200"
@@ -672,7 +531,7 @@ export default function GamifiedDashboard() {
                         </p>
                       )}
                     </div>
-                    <div className="text-right">
+                    <div className="text-center">
                       <p className="text-2xl font-bold text-white">{userProgress.currentStreak}</p>
                       <p className="text-sm text-white">days</p>
                     </div>
@@ -689,113 +548,114 @@ export default function GamifiedDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-12 w-7" />
-                  Your Learning Path
+                  Learning Progress
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  {/* Top 3 Modules with Progress */}
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-blue-600">📚 Most Active Modules</h3>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => {
-                          fetchTopVideos()
-                          // Also refresh module suggestions if needed
-                        }}
-                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-100"
-                      >
-                        <RefreshCw className="h-4 w-4 mr-1" />
-                        Refresh
-                      </Button>
-                    </div>
-                    <p className="text-sm text-blue-600 mb-4">Shows your top 3 modules based on videos watched</p>
-                    <div className="space-y-3">
                       {(() => {
-                        // Calculate module progress based on videos watched
-                        const moduleProgress: {[key: string]: {progress: number, videoCount: number, watchedCount: number, totalVideos: number}} = {}
-                        
-                        // Define compulsory modules to exclude
-                        const compulsoryModules = ["Company Introduction", "Additional Features", "AI tools", "AI Tools", "ai tools", "Artificial Intelligence", "artificial intelligence"]
-                        
-                        // Calculate progress for all videos across all modules
-                        allVideos.forEach(video => {
-                          if (!moduleProgress[video.category]) {
-                            moduleProgress[video.category] = {progress: 0, videoCount: 0, watchedCount: 0, totalVideos: 0}
-                          }
-                          moduleProgress[video.category].totalVideos++
-                          
-                          // Count videos that have been watched (any progress > 0)
-                          if ((videoProgress[video.id] || 0) > 0) {
-                            moduleProgress[video.category].watchedCount++
-                          }
-                        })
-                        
-                        // Calculate percentage based on videos watched vs total videos in module
-                        Object.keys(moduleProgress).forEach(category => {
-                          const module = moduleProgress[category]
-                          // Progress is based on how many videos from this module the user has watched
-                          module.progress = module.totalVideos > 0 ? (module.watchedCount / module.totalVideos) * 100 : 0
-                        })
-                        
-                        // Get top 3 modules by videos watched (most active modules), excluding compulsory modules
-                        const topModules = Object.entries(moduleProgress)
-                          .filter(([category]) => !compulsoryModules.includes(category)) // Exclude compulsory modules
-                          .sort(([,a], [,b]) => b.watchedCount - a.watchedCount) // Sort by videos watched
-                          .slice(0, 3)
-                        
-                        return topModules.length > 0 ? (
-                          topModules.map(([category, module], index) => (
-                    <motion.div
-                              key={category}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                              className="p-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer"
-                              onClick={() => startModuleFromCategory(category)}
-                    >
-                              <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                                    {index + 1}
-                                  </div>
-                                  <div className="flex-1">
-                                    <h4 className="font-semibold text-base">{category}</h4>
-                                    <p className="text-sm text-blue-700">
-                                      {module.watchedCount} of {module.totalVideos} videos watched
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-sm font-bold text-blue-700">
-                                    {Math.round(module.progress)}%
-                                  </div>
-                                  <div className="text-xs text-blue-500">Videos Watched</div>
-                                </div>
-                              </div>
-                              <Progress 
-                                value={module.progress} 
-                                className="h-2 bg-blue-200"
+                  const totalVideos = allVideos.length
+                  // Use strictly completed videos for watched count to match sidebar and classic dashboard
+                  const watchedCount = allVideos.reduce((acc, v) => acc + (watchedVideoIds.has(v.id) ? 1 : 0), 0)
+                  const unwatchedCount = Math.max(0, totalVideos - watchedCount)
+                  const watchedPercent = totalVideos > 0 ? Math.round((watchedCount / totalVideos) * 100) : 0
+
+                  const data = [
+                    { name: "Watched", value: watchedCount, fill: "url(#watchedGradient)" },
+                    { name: "Unwatched", value: unwatchedCount, fill: "#e5e7eb" },
+                  ]
+
+                  if (totalVideos === 0) {
+                    return (
+                      <div className="text-center py-12 text-gray-500">
+                        <div className="text-4xl mb-2">📹</div>
+                        <p className="text-sm">No videos available</p>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div className="space-y-6">
+                      <div className="h-64 w-full flex items-center justify-center">
+                        <div className="w-full h-64">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <defs>
+                                <linearGradient id="watchedGradient" x1="0" y1="0" x2="1" y2="1">
+                                  <stop offset="0%" stopColor="#22c55e" />
+                                  <stop offset="100%" stopColor="#16a34a" />
+                                </linearGradient>
+                              </defs>
+                              {/* Background track */}
+                              <Pie
+                                data={[{ name: "Track", value: 100 }]}
+                                dataKey="value"
+                                cx="50%"
+                                cy="50%"
+                                outerRadius={96}
+                                innerRadius={62}
+                                stroke="none"
+                                isAnimationActive={false}
+                                fill="#eef2f7"
                               />
-                            </motion.div>
-                          ))
-                        ) : (
-                          <div className="text-center py-6 text-gray-500">
-                            <div className="text-4xl mb-2">📚</div>
-                            <p className="text-sm">No modules in progress yet</p>
-                            <p className="text-xs">Start watching videos to see module progress here</p>
-                          </div>
-                        )
-                      })()}
+                              {/* Foreground progress */}
+                              <Pie
+                                data={data}
+                                dataKey="value"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                outerRadius={96}
+                                innerRadius={62}
+                                isAnimationActive
+                                labelLine={false}
+                              >
+                                {data.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.fill as string} />
+                                ))}
+                                <Label
+                                  position="center"
+                                  content={({ viewBox }) => {
+                                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                                      const cx = (viewBox as any).cx
+                                      const cy = (viewBox as any).cy
+                                      return (
+                                        <g>
+                                          <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" alignmentBaseline="middle" dy="0.35em" className="fill-gray-900" fontSize={22} fontWeight={700}>
+                                            {watchedPercent}%
+                                          </text>
+                                        </g>
+                                      )
+                                    }
+                                    return null
+                                  }}
+                                />
+                              </Pie>
+                              <Tooltip formatter={(value: any) => {
+                                const val = Number(value as number)
+                                const pct = totalVideos > 0 ? Math.round((val / totalVideos) * 100) : 0
+                                return [`${pct}%`, ""]
+                              }} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                                  </div>
+                                </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="rounded-lg border p-4 text-center">
+                          <div className="text-sm text-gray-500">Total Videos</div>
+                          <div className="text-2xl font-semibold">{totalVideos}</div>
+                                  </div>
+                        <div className="rounded-lg border p-4 text-center">
+                          <div className="text-sm text-gray-500">Watched</div>
+                          <div className="text-2xl font-semibold text-green-600">{watchedCount}</div>
+                                </div>
+                        <div className="rounded-lg border p-4 text-center">
+                          <div className="text-sm text-gray-500">Remaining</div>
+                          <div className="text-2xl font-semibold text-gray-700">{unwatchedCount}</div>
                         </div>
                       </div>
-
-
-
-
                 </div>
+                  )
+                })()}
               </CardContent>
             </Card>
 

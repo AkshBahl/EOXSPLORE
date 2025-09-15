@@ -72,6 +72,7 @@ interface UserAnalytics {
   timeWatchedSeconds: number
   videoCount: number
   completionRate: number
+  averageQuizScorePct?: number
   lastActive: string
   lastActiveTimestamp: number
   viewedVideos: {
@@ -218,6 +219,20 @@ export default function IndividualAnalyticsPage() {
         userMap.set(user.userId, user)
       })
 
+      // Fetch quiz results to compute per-user average quiz score
+      const quizResultsSnapshot = await getDocs(collection(db, "quizResults"))
+      const userQuizAgg = new Map<string, { total: number; count: number }>()
+      quizResultsSnapshot.docs.forEach((d) => {
+        const data: any = d.data()
+        const uid = data.userId
+        const scoreFraction: number = typeof data.score === 'number' ? data.score : 0
+        if (!uid) return
+        const prev = userQuizAgg.get(uid) || { total: 0, count: 0 }
+        prev.total += scoreFraction * 100
+        prev.count += 1
+        userQuizAgg.set(uid, prev)
+      })
+
       // Fetch watch events with appropriate date filtering
       let eventsQuery = query(
         collection(db, "videoWatchEvents"),
@@ -309,6 +324,10 @@ export default function IndividualAnalyticsPage() {
           timeWatchedSeconds: 0,
           videoCount: 0,
           completionRate: 0,
+          averageQuizScorePct: (() => {
+            const agg = userQuizAgg.get(userId)
+            return agg && agg.count > 0 ? agg.total / agg.count : 0
+          })(),
           lastActive: formatDate(lastActiveTimestamp),
           lastActiveTimestamp: lastActiveTimestamp,
           viewedVideos: [],
@@ -906,6 +925,7 @@ export default function IndividualAnalyticsPage() {
                                 ))}
                             </Button>
                           </TableHead>
+                          <TableHead>Avg Quiz Score</TableHead>
                           <TableHead>
                             <Button
                               variant="ghost"
@@ -941,6 +961,7 @@ export default function IndividualAnalyticsPage() {
                             <TableCell>{user.videoCount}</TableCell>
                             <TableCell>{user.timeWatched}</TableCell>
                             <TableCell>{(user.completionRate * 100).toFixed(0)}%</TableCell>
+                            <TableCell>{(user.averageQuizScorePct || 0).toFixed(0)}%</TableCell>
                             <TableCell>{user.lastActive}</TableCell>
                             <TableCell>
                               <Button

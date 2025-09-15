@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, use as reactUse } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import { collection, getDocs, query, where, addDoc } from "firebase/firestore"
@@ -19,7 +19,10 @@ interface QuizQuestion {
 
 export default function ModuleQuizPage() {
   const router = useRouter()
-  const { moduleId } = useParams<{ moduleId: string }>()
+  // Handle both Next.js versions: unwrap if it's a promise, else use directly
+  const maybeParams = useParams() as any
+  const params = (maybeParams && typeof maybeParams.then === 'function') ? (reactUse(maybeParams) as any) : maybeParams
+  const moduleId: string = params.moduleId
   const [questions, setQuestions] = useState<QuizQuestion[]>([])
   const [answers, setAnswers] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
@@ -85,21 +88,43 @@ export default function ModuleQuizPage() {
   }
 
   return (
-    <div>
-      <header className="border-b sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/dashboard?view=classic">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <header className="sticky top-0 z-20 border-b bg-white/85 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+        <div className="mx-auto max-w-5xl flex h-16 items-center justify-between px-4 sm:px-6">
+          <Link href="/dashboard?view=classic" className="flex items-center gap-2">
             <img src="/Black logo.png" alt="EOXS Logo" className="h-8 w-auto" />
           </Link>
+          <div className="hidden sm:flex items-center gap-2 text-sm text-slate-600">
+            <span className="hidden sm:inline">Module:</span>
+            <span className="font-medium text-slate-900">{prettyModuleName}</span>
+          </div>
+          <Link href="/dashboard?view=classic"><Button variant="outline" size="sm">Back to Dashboard</Button></Link>
         </div>
       </header>
 
-      <div className="max-w-3xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold">Quiz: {prettyModuleName}</h1>
-        <Link href="/dashboard?view=classic"><Button variant="outline">Back to Dashboard</Button></Link>
-      </div>
-      <Separator className="mb-6" />
+      <div className="mx-auto max-w-5xl p-4 sm:p-6">
+        {/* Progress Bar */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between text-sm text-slate-600 mb-2">
+            <span>Answered {Object.keys(answers).length} / {questions.length}</span>
+            {result && (
+              <span className={result.passed ? "text-green-700 font-medium" : "text-red-700 font-medium"}>
+                Score: {result.scorePct}% {result.passed ? "(Passed)" : "(Need ≥75%)"}
+              </span>
+            )}
+          </div>
+          <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
+            <div
+              className="h-full bg-indigo-600 transition-all duration-300"
+              style={{ width: `${questions.length ? (Object.keys(answers).length / questions.length) * 100 : 0}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl sm:text-2xl font-semibold">Quiz: {prettyModuleName}</h1>
+        </div>
+        <Separator className="mb-6" />
 
       {loading && <div>Loading questions...</div>}
       {!loading && questions.length === 0 && (
@@ -114,72 +139,110 @@ export default function ModuleQuizPage() {
       )}
 
       {!loading && questions.length > 0 && (
-        <div className="space-y-4">
-          {questions.map((q, idx) => (
-            <Card key={q.id || q.question}>
-              <CardHeader>
-                <CardTitle className="text-base">{idx + 1}. {q.question}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {q.options.map((opt, i) => {
-                  const key = q.id || q.question
-                  const selected = answers[key] === i
-                  const showFeedback = !!result
-                  const isCorrect = i === q.correctIndex
-                  const isWrongSelected = selected && !isCorrect
-                  const base = 'w-full text-left border rounded px-3 py-2 transition-colors'
-                  const preSubmitStyle = selected ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 hover:bg-slate-50'
-                  // After submit: only show red for wrong selected; show green ONLY if the selected option is correct
-                  const postSubmitStyle = (selected && isCorrect)
-                    ? 'border-green-600 bg-green-50 text-green-800'
-                    : isWrongSelected
-                      ? 'border-red-600 bg-red-50 text-red-700'
-                      : 'border-slate-200'
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        if (result) return
-                        setAnswers((prev) => ({ ...prev, [key]: i }))
-                      }}
-                      disabled={!!result}
-                      className={`${base} ${showFeedback ? postSubmitStyle : preSubmitStyle}`}
-                    >
-                      {String.fromCharCode(65 + i)}. {opt}
-                      {showFeedback && (
-                        <span className={`ml-2 text-xs ${isWrongSelected ? 'text-red-700' : (selected && isCorrect) ? 'text-green-700' : 'text-slate-400'}`}>
-                          {isWrongSelected ? '(Your answer)' : (selected && isCorrect) ? '(Correct)' : ''}
-                        </span>
-                      )}
-                    </button>
-                  )
-                })}
-              </CardContent>
-            </Card>
-          ))}
+        <div className="space-y-6">
+          {questions.map((q, idx) => {
+            const key = q.id || q.question
+            const selectedIndex = answers[key]
+            const showFeedback = !!result
+            return (
+              <Card key={key} className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-start gap-4">
+                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white text-sm font-semibold">
+                      {idx + 1}
+                    </span>
+                    <span className="leading-relaxed">{q.question}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {q.options.map((opt, i) => {
+                    const isSelected = selectedIndex === i
+                    const isCorrect = i === q.correctIndex
+                    const isWrongSelected = isSelected && !isCorrect
+                    const base = "w-full text-left rounded-lg border px-4 py-3 transition-all hover:shadow-sm"
+                    const pre = isSelected 
+                      ? "border-indigo-600 bg-indigo-50 shadow-sm" 
+                      : "border-slate-200 hover:bg-slate-50"
+                    const post = isSelected && isCorrect
+                      ? "border-green-600 bg-green-50 text-green-800"
+                      : isWrongSelected
+                        ? "border-red-600 bg-red-50 text-red-700"
+                        : "border-slate-200"
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          if (result) return
+                          setAnswers((prev) => ({ ...prev, [key]: i }))
+                        }}
+                        disabled={!!result}
+                        className={`${base} ${showFeedback ? post : pre}`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                            isSelected 
+                              ? 'bg-indigo-600 text-white' 
+                              : 'bg-slate-200 text-slate-700'
+                          }`}>
+                            {String.fromCharCode(65 + i)}
+                          </span>
+                          <span className="flex-1 text-left">{opt}</span>
+                          {showFeedback && (
+                            <span className={`text-sm font-medium ${
+                              isWrongSelected 
+                                ? 'text-red-700' 
+                                : (isSelected && isCorrect) 
+                                  ? 'text-green-700' 
+                                  : 'text-slate-400'
+                            }`}>
+                              {isWrongSelected ? 'Your answer' : (isSelected && isCorrect) ? 'Correct' : ''}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </CardContent>
+              </Card>
+            )
+          })}
 
-          <div className="flex items-center gap-3">
-            {!result && (
-              <Button onClick={submit} disabled={!allAnswered || submitting} className="bg-indigo-600 hover:bg-indigo-700">
-                {submitting ? 'Submitting...' : 'Submit Quiz'}
-              </Button>
-            )}
-            {result && (
-              <Button
-                onClick={() => { setResult(null); setAnswers({}); }}
-                className="bg-slate-700 hover:bg-slate-800"
-              >
-                Retry Quiz
-              </Button>
-            )}
-            {!allAnswered && !result && <span className="text-sm text-slate-500">Answer all questions to submit</span>}
-          </div>
-
-          {result && (
-            <div className="mt-2 text-sm">
-              Score: <span className={result.passed ? 'text-green-600' : 'text-red-600'}>{result.scorePct}%</span> • {result.passed ? 'Passed' : 'Not Passed (need ≥75%)'}
+          {/* Sticky Submit Bar */}
+          <div className="sticky bottom-0 z-10 bg-white/95 backdrop-blur border-t border-slate-200 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {!result && (
+                <Button 
+                  onClick={submit} 
+                  disabled={!allAnswered || submitting} 
+                  className="bg-indigo-600 hover:bg-indigo-700 px-6"
+                >
+                  {submitting ? 'Submitting...' : 'Submit Quiz'}
+                </Button>
+              )}
+              {result && (
+                <Button 
+                  onClick={() => { setResult(null); setAnswers({}); }} 
+                  className="bg-slate-700 hover:bg-slate-800 px-6"
+                >
+                  Retry Quiz
+                </Button>
+              )}
+              {!allAnswered && !result && (
+                <span className="text-sm text-slate-500">
+                  Answer all {questions.length} questions to submit
+                </span>
+              )}
             </div>
-          )}
+            {result && (
+              <div className={`px-4 py-2 rounded-lg border text-sm font-medium ${
+                result.passed 
+                  ? 'border-green-200 bg-green-50 text-green-800' 
+                  : 'border-red-200 bg-red-50 text-red-800'
+              }`}>
+                {result.scorePct}% • {result.passed ? 'Passed' : 'Not Passed (need ≥75%)'}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

@@ -1318,19 +1318,7 @@ export default function Dashboard() {
                 </Button>
               </Link>
               
-              <Link href="/playlist" passHref legacyBehavior>
-                <Button asChild variant="ghost" size="lg" className="justify-start w-full text-white hover:bg-green-500/80 hover:text-white transition-all duration-200 rounded-lg">
-                  <a 
-                    className="flex items-center gap-3 text-white"
-                    onClick={() => isMobile && setIsSidebarOpen(false)}
-                  >
-                    <div className="p-2 bg-white/10 rounded-lg">
-                      <List className="w-4 h-4 text-white" />
-                    </div>
-                    <span className="text-white">My Playlist</span>
-                  </a>
-                </Button>
-              </Link>
+              {/* My Playlist link removed */}
               
               <Link href="/leaderboard" passHref legacyBehavior>
                 <Button asChild variant="ghost" size="lg" className="justify-start w-full text-white hover:bg-green-500/80 hover:text-white transition-all duration-200 rounded-lg">
@@ -1451,9 +1439,13 @@ export default function Dashboard() {
                       const quizForModule = quizResults[moduleId]
                       const hasPassedQuiz = quizForModule?.passed === true
 
-                      // Determine gating: previous module must be completed to unlock this one
+                      // Determine gating per new rules:
+                      // - Only "Company Introduction" is unlocked initially
+                      // - A module unlocks only after the previous module's videos are all watched AND its quiz is passed
                       const isPrevCompleted = () => {
-                        if (index === 0) return true
+                        if (index === 0) {
+                          return module.category === "Company Introduction"
+                        }
                         const prev = modules[index - 1]
                         const prevId = slugify(prev.category)
                         const prevWatched = prev.videos.every(v => v.watched)
@@ -1561,10 +1553,13 @@ export default function Dashboard() {
                               </div>
                             </div>
                           </button>
-                          {/* Quiz button for this module */}
-                          <Link href={`/quiz/${moduleId}`}>
-                            <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
-                              {hasPassedQuiz ? 'Retake Quiz' : 'Take Quiz'}
+                          {/* Quiz button for this module - unlocked only when all module videos watched */}
+                          <Link href={hasWatchedAll && unlocked ? `/quiz/${moduleId}` : "#"}>
+                            <Button 
+                              className="w-full bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={!(hasWatchedAll && unlocked)}
+                            >
+                              {hasWatchedAll && unlocked ? (hasPassedQuiz ? 'Retake Quiz' : 'Take Quiz') : 'Quiz Locked'}
                             </Button>
                           </Link>
                         </div>
