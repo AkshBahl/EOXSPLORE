@@ -1432,7 +1432,19 @@ export default function Dashboard() {
                 <div className="mb-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {modules.map((module, index) => {
-                      const displayName = (moduleDisplayNames[module.category] || module.name).trim()
+                      const displayName = (() => {
+                        const raw = (moduleDisplayNames[module.category] || module.name).trim()
+                        const lc = module.category.toLowerCase()
+                        const noModuleCategories = [
+                          'additional features',
+                          'ai tools',
+                          'customer testimonial',
+                          'master data management',
+                        ]
+                        return noModuleCategories.includes(lc)
+                          ? raw.replace(/\s*Module$/i, '').trim()
+                          : raw
+                      })()
                       const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
                       const moduleId = slugify(module.category)
                       const hasWatchedAll = module.videos.every(v => v.watched)

@@ -496,7 +496,7 @@ export default function GamifiedDashboard() {
                   <div className="bg-white/20 p-2 rounded-full w-fit mx-auto mb-2">
                     <Play className="h-4 w-4" />
                   </div>
-                  <p className="text-3xl font-normal text-white">{userProgress.totalVideosWatched}</p>
+                  <p className="text-3xl font-normal text-white">{watchedVideoIds.size}</p>
                   <p className="text-sm text-white">Videos Watched</p>
                 </CardContent>
               </Card>
@@ -575,10 +575,12 @@ export default function GamifiedDashboard() {
 
                   return (
                     <div className="space-y-6">
-                      <div className="h-64 w-full flex items-center justify-center">
-                        <div className="w-full h-64">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                        {/* Left: Pie Chart */}
+                        <div className="h-64 w-full flex items-center justify-center">
+                          <div className="w-full h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
                               <defs>
                                 <linearGradient id="watchedGradient" x1="0" y1="0" x2="1" y2="1">
                                   <stop offset="0%" stopColor="#22c55e" />
@@ -635,22 +637,24 @@ export default function GamifiedDashboard() {
                                 const pct = totalVideos > 0 ? Math.round((val / totalVideos) * 100) : 0
                                 return [`${pct}%`, ""]
                               }} />
-                            </PieChart>
-                          </ResponsiveContainer>
+                              </PieChart>
+                            </ResponsiveContainer>
                                   </div>
                                 </div>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="rounded-lg border p-4 text-center">
-                          <div className="text-sm text-gray-500">Total Videos</div>
-                          <div className="text-2xl font-semibold">{totalVideos}</div>
+                        {/* Right: Stats Boxes */}
+                        <div className="space-y-4">
+                          <div className="rounded-lg border p-4 text-center">
+                            <div className="text-sm text-gray-500">Total Videos</div>
+                            <div className="text-2xl font-semibold">{totalVideos}</div>
                                   </div>
-                        <div className="rounded-lg border p-4 text-center">
-                          <div className="text-sm text-gray-500">Watched</div>
-                          <div className="text-2xl font-semibold text-green-600">{watchedCount}</div>
+                          <div className="rounded-lg border p-4 text-center">
+                            <div className="text-sm text-gray-500">Watched</div>
+                            <div className="text-2xl font-semibold text-green-600">{watchedCount}</div>
                                 </div>
-                        <div className="rounded-lg border p-4 text-center">
-                          <div className="text-sm text-gray-500">Remaining</div>
-                          <div className="text-2xl font-semibold text-gray-700">{unwatchedCount}</div>
+                          <div className="rounded-lg border p-4 text-center">
+                            <div className="text-sm text-gray-500">Remaining</div>
+                            <div className="text-2xl font-semibold text-gray-700">{unwatchedCount}</div>
+                          </div>
                         </div>
                       </div>
                 </div>
