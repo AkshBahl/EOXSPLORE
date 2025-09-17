@@ -251,9 +251,6 @@ export default function VideoPlayerPage() {
     moduleName?: string
   } | null>(null)
 
-  // Add playbackRate state and handlers
-  const [playbackRate, setPlaybackRate] = useState(1)
-  const [speedMenuOpen, setSpeedMenuOpen] = useState(false)
 
   const [volume, setVolume] = useState(100)
   const [showVolumeSlider, setShowVolumeSlider] = useState(false)
@@ -696,10 +693,7 @@ export default function VideoPlayerPage() {
         videoRef.current.muted = false;
       }
       
-      // Reset playback rate
-      setPlaybackRate(1);
       if (videoRef.current) {
-        videoRef.current.playbackRate = 1;
       }
 
       // Load and restore video progress
@@ -2597,13 +2591,6 @@ export default function VideoPlayerPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // Function to handle playback rate change
-  const handlePlaybackRateChange = (rate: number) => {
-    if (videoRef.current) {
-      videoRef.current.playbackRate = rate
-      setPlaybackRate(rate)
-    }
-  }
 
   // Add this function to clear session tracking when changing videos
   const clearVideoSessionTracking = (videoId: string) => {
@@ -2908,35 +2895,6 @@ export default function VideoPlayerPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {/* Playback Speed Dropdown */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <div
-                              role="button"
-                              tabIndex={0}
-                              className="text-white hover:bg-white/20 text-sm px-3 py-2 rounded cursor-pointer"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  setSpeedMenuOpen((v) => !v);
-                                }
-                              }}
-                            >
-                              {playbackRate}x
-                            </div>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-16">
-                            {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
-                              <DropdownMenuItem
-                                key={rate}
-                                className={playbackRate === rate ? "bg-muted" : ""}
-                                onClick={() => handlePlaybackRateChange(rate)}
-                              >
-                                {rate}x
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-
                         {/* Fullscreen Button */}
                         <div
                           role="button"
