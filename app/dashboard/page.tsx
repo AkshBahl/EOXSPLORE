@@ -1290,8 +1290,11 @@ export default function Dashboard() {
                   setShowGamifiedDashboard(true)
                   setIsRefreshing(true)
                   setTimeout(() => {
-                    window.location.reload()
-                  }, 300)
+                    setIsRefreshing(false)
+                  }, 500)
+                  if (isMobile) {
+                    setIsSidebarOpen(false)
+                  }
                 }}
                 className="justify-start w-full text-white hover:bg-green-500/80 hover:text-white transition-all duration-200 rounded-lg"
               >
@@ -1381,28 +1384,7 @@ export default function Dashboard() {
             
             {/* Separator removed as requested */}
             
-            {/* Quick Stats Section */}
-            <div className="p-4 mt-auto">
-              <div className="bg-white/10 rounded-lg p-3">
-                <h3 className="text-white font-medium text-sm mb-2">Quick Stats</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-white text-xs">
-                    <span className="text-white">Videos Watched</span>
-                    <span className="font-medium text-white">{videos.filter(v => v.watched).length}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-white text-xs">
-                    <span className="text-white">Total Videos</span>
-                    <span className="font-medium text-white">{videos.length}</span>
-                  </div>
-                  <div className="w-full bg-green-500/30 rounded-full h-1.5">
-                    <div 
-                      className="bg-white h-1.5 rounded-full transition-all duration-300"
-                      style={{ width: `${videos.length > 0 ? (videos.filter(v => v.watched).length / videos.length) * 100 : 0}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </div>      
+            
           </div>
         </aside>
       )}

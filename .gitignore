@@ -13,8 +13,6 @@ build/
 dist/
 
 # Environment variables
-.env
-.env.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -108,3 +106,4 @@ jspm_packages/
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.* 
+config.bat
